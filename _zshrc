@@ -208,8 +208,6 @@ alias rm='rm -v'
 alias rmtmp='rm -v *~ #*#'
 alias rmgtags='rm -v GPATH GRTAGS GTAGS'
 
-#grep
-export GREP_OPTIONS="--color=auto"
 #ln
 alias ln="ln -i -v"
 
