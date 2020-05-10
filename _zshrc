@@ -18,6 +18,7 @@
 #M-up	上のディレクトリ
 #M-left	戻る
 
+
 ################
 ### 基本設定 ###
 ################
@@ -54,13 +55,35 @@ fi
 #zmodload zsh/files
 
 
-
-
 ################
 ### 環境変数 ###
 ################
-#日本語utf-8
+## Programming contest
+# online-judge-tools: https://github.com/online-judge-tools/oj
+export PATH=$PATH:$HOME/.local/bin
+
+## color
+export TERM=xterm-256color
+
+## cpputest: brewでインストールしたものでなく、git cloneしたものを使用
+export CPPUTEST_HOME=~/tools/cpputest
+
+## go言語
+export PATH=$PATH:/usr/local/go/bin
+export GOPATH=$HOME/workspace/goprojects
+
+## Added by the Heroku Toolbelt
+export PATH="/usr/local/heroku/bin:$PATH"
+
+## 日本語utf-8
 export LANG=ja_JP.UTF-8
+
+## ライブラリパス
+export LD_LIBRARY_PATH=${HOME}/local/lib:${LD_LIBRARY_PATH}
+
+### 非端末プロセスなら終了 ###
+[ $#PROMPT -eq 0 -o $#TERM -eq 0 ] && return
+
 
 #################
 ### プロンプト ##
@@ -76,9 +99,9 @@ local BLUE=$'%{\e[1;34m%}'
 #local LIGHTBLUE=$'%{\e[1;36m%}'
 #local WHITE=$'%{\e[1;37m%}'
 local DEFAULT=$'%{\e[1;m%}'
-#%n	ユーザー名
-#%M	コンピュータ名
-#%c	カレントディレクトリ
+	#%n	ユーザー名
+	#%M	コンピュータ名
+	#%c	カレントディレクトリ
 #通常
 PROMPT=$DEFAULT"%n@%M:"$BLUE"%c"$DEFAULT"$ "
 #複数行
@@ -86,7 +109,7 @@ PROMPT2="%_$ "
 #確認
 SPROMPT="%r is correct? [n,y,a,e]: "
 #右プロンプト
-#%*	時間
+	#%*	時間
 RPROMPT=$DEFAULT"["$GREEN"%*"$DEFAULT"]"
 #複数行右プロンプト
 #RPROMPT2
@@ -99,10 +122,19 @@ kterm*|xterm*)
 	;;
 esac
 #補完候補にもlsと同じ色付き表示
-eval `dircolors`
-zstyle ':completion:*:default' list-colors ${LS_COLORS}
-#kill の候補にも色付き表示
-zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([%0-9]#)*=0=01;31'
+
+case ${OSTYPE} in
+  darwin*) # ここに Mac 向けの設定
+    ;;
+  linux*)  # ここに Linux 向けの設定
+	eval `dircolors`
+	zstyle ':completion:*:default' list-colors ${LS_COLORS}
+	#kill の候補にも色付き表示
+	zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([%0-9]#)*=0=01;3\
+1'
+	;;
+esac
+
 
 ##################
 ### シェル変数 ###
@@ -114,6 +146,7 @@ if [ -d "$HOME/.compfunc" ]; then
 fi
 #「/」も単語区切りとみなす。
 WORDCHARS=${WORDCHARS:s,/,,}
+
 
 ############
 ### 関数 ###
@@ -140,23 +173,52 @@ function cdback() {
 	popd
 	zle reset-prompt
 }
+# nautilusでフォルダ開く
+function naop() {
+	if [ "$#" = "0" ]; then
+		nautilus .
+	else
+		for d in $@
+		do
+			echo "nautilus $d"
+			nautilus $d
+		done
+	fi
+}
 
-#######################
-## environment paths ##
-#######################
 
 ###########
 ## alias ##
 ###########
+alias zcs="zcompile ~/.zshrc && source ~/.zshrc"
+
+## emacs
+alias ekill='emacsclient -e "(kill-emacs)"'
+alias emacs='emacs -nw'
+
 ## nkf
 # ファイルを指定の文字コードで上書き
 alias nkfutf8="nkf -w --overwrite "
 alias nkfsjis="nkf -s --overwrite "
 
+## cp関連
+alias cpmake="cp ~/Dropbox/data/template/make/C_and_C++/Makefile ."
+
 ## g++関連
 alias g="g++"
 alias a="./a.out"
-alias g++11="g++ -std=c++11 "
+alias g++11="g++ -std=c++11"
+
+## Programming Contest
+alias gt="g++ main.cpp && oj t"
+alias ga="g++ main.cpp && ./a.out"
+
+## PDFviewer: 現在主に使っているPDFviewrを設定
+alias pdfviewer="zathura"
+alias pdfediter="pdfshuffler"
+
+## htags
+alias htags-html="htags -saF"
 
 ## gtags
 #alias gtags-table="gtags --gtagslabel=plugin-example"
@@ -164,18 +226,38 @@ alias g++11="g++ -std=c++11 "
 alias gtags-table="gtags --gtagslabel=exuberant-ctags"
 alias gtags-clear="rm -v GPATH GRTAGS GTAGS"
 
+## mysql
+alias mysql_login_ryohei="mysql -u ryohei -p"
+alias mysql_login_root="mysql -u root -p"
+alias mysql_login_brs="mysql -u brs -p"
+alias mysql-config="sudo emacs /etc/mysql/my.conf"
+alias mysql-restart="sudo service mysql restart"
+
+## tomcat関連のエイリアス
+alias tomcatStart="sudo service tomcat7 start"
+alias tomcatStop="sudo service tomcat7 stop"
+
 ## javaバージョン切り替えのためのエイリアス
 alias javaVerCh="sudo update-alternatives --config java"
 alias javacVerCh="sudo update-alternatives --config javac"
 
+## apt系のエイリアス
+alias aptupd="sudo apt update"
+alias aptupg="sudo apt upgrade"
+alias aptrem="sudo apt autoremove"
+alias aptcle="sudo apt autoclean"
+alias aptins="sudo apt install"
+
+## reboot, poweroff関連
+alias poweroff="sudo poweroff"
+alias reboot="sudo reboot"
+
 ## 移動履歴
-# 130617
 # cd -[tab] で，移動履歴を参照し，再利用できる．
 setopt auto_pushd
 setopt pushd_ignore_dups
 
 ## グローバルエイリアス
-# 130617
 # ex. grep "hogehoge" ./* W -l
 #   = grep "hogehoge" ./* | wc -l
 alias -g G='| grep'
@@ -188,7 +270,13 @@ alias -g X='| xargs'
 
 #ls
 alias l='ls -CF'
-alias ls="ls -FX --color=auto"	#ディレクトリには/, 色つき
+case ${OSTYPE} in
+  darwin*) # ここに Mac 向けの設定
+    ;;
+  linux*)  # ここに Linux 向けの設定
+	alias ls="ls -FX --color=auto"  #ディレクトリには/, 色つき
+  ;;
+esac
 alias la="ls -a"				#隠しファイルも
 alias ll="ls -lh"				#詳細付き, ファイルサイズに接頭語
 alias lla="ls -lha"				#全部詳細
@@ -212,16 +300,28 @@ alias rmgtags='rm -v GPATH GRTAGS GTAGS'
 alias ln="ln -i -v"
 
 #拡張子で自動化
+# alias -s c=gedit
+# alias -s C=gedit
+# alias -s cpp=gedit
+# alias -s h=gedit
 alias -s c=emacs
 alias -s C=emacs
 alias -s cpp=emacs
 alias -s h=emacs
-
+#alias -s html=google-chrome
+alias -s html=firefox
+# alias -s java=gedit
 alias -s java=emacs
+#alias -s pdf=google-chrome
+alias -s pdf=firefox
+# alias -s txt=gedit
 alias -s txt=emacs
+#alias -s xhtml=google-chrome
+alias -s xhtml=firefox
+# alias -s xml=gedit
 alias -s xml=emacs
 alias -s zip=zipinfo
-
+#sudo用gedit
 #stdoutをクリップボードへ
 alias -g toclip="|xsel -bi"
 #stdout+stderrをクリップボードへ
@@ -240,14 +340,16 @@ alias lsa="la"
 alias cd..="cd .."
 alias emasc="emacs"
 alias em="emacs"
-
+##sl
+#alias -g sl="echo you are an idiot!"
+#alias -g LS="ECHO YOU ARE AN IDIOT!"
 alias -g sl="ls"
 alias -g LS="ls"
+
 
 ####################
 ### キーバインド ###
 ####################
-
 # HOME
 bindkey '^[OH' beginning-of-line
 bindkey	'^[OF' end-of-line
@@ -267,6 +369,7 @@ bindkey '^[[1;3D' cdback
 #M-@
 bindkey -s '^[`' '`^A `^A'
 bindkey -s "^['" "'^A '^A"
+
 
 ##################
 ### 補完ルール ###
@@ -324,3 +427,59 @@ setopt auto_param_keys
 setopt noautoremoveslash
 #出力の文字列末尾に改行コードが無い場合でも表示
 unsetopt promptcr
+
+
+############
+## その他 ##
+############
+
+#python ~/bin/oblique.py
+#~/bin/tml --counts
+if [ -f ${HOME}/git/workspace/utisamvps/utisamvps/static/tt.html ]; then
+	alias todo='gedit ${HOME}/git/workspace/utisamvps/utisamvps/static/tt.html'
+fi
+[[ -s /etc/profile.d/autojump.sh ]] && . /etc/profile.d/autojump.sh
+
+
+### for Mac
+## zsh
+# zsh-completions
+case ${OSTYPE} in
+	darwin*) # ここに Mac 向けの設定
+		alias e="open -a emacs"
+		fpath=(/usr/local/share/zsh-completions $fpath)
+		export PATH="/usr/local/bin:$PATH"
+		export HOMEBREW_CASK_OPTS="--appdir=/Applications"
+		;;
+	linux*)  # ここに Linux 向けの設定
+		;;
+esac
+
+## CUDA and cuDNN paths
+export CUDA_HOME=/usr/local/cuda-8.0
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${CUDA_HOME}/lib64
+export PATH=$PATH:${CUDA_HOME}/bin
+
+### WSL
+umask 022
+
+## X Window Server: https://ja.osdn.net/projects/sfnet_xming/
+export DISPLAY=localhost:0.0
+
+## japanese input on GUI: https://ahiru8usagi.hatenablog.com/entry/WSL_GUIApps_Japanese
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
+export DefaultIMModule=fcitx
+
+## Windoes Softs: https://qiita.com/python_walker/items/41894c952ee06b018994
+# path
+export PATH=$PATH:/mnt/c/Program\ Files\ \(x86\)/Microsoft\ Office/root/Office16
+export PATH=$PATH:/mnt/c/Program\ Files\ \(x86\)/Adobe/Acrobat\ 11.0/Acrobat
+export PATH=$PATH:/mnt/c/Program\ Files/Mozilla\ Firefox/
+# alias
+alias ppt='POWERPNT.EXE'
+alias exl='EXCEL.EXE'
+alias word='WINWORD.EXE'
+alias adobe='AcroRd32.exe'
+alias fx='firefox.exe'
