@@ -205,7 +205,6 @@ alias gta="git add"
 alias gtc="git commit"
 alias gtm="git merge"
 alias gtp="git push"
-alias gtc="git commit"
 alias gtl="git log"
 alias gtco="git checkout"
 
