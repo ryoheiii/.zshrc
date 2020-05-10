@@ -1,22 +1,21 @@
 #!/bin/zsh
 
-#変更後はコンパイル
-#$ zcompile ~/.zshrc
-#設定
-#$ source ~/.zshrc
+## 変更後はコンパイル & 設定 (alias -> zcns)
+# コンパイル: $ zcompile ~/.zshrc
+# 設定:       $ source ~/.zshrc
 
-# ショートカットキー
-#C-r	履歴から検索
-#Esc-h	man呼び出し
-#Esc-q	現在入力中の文字列を退避
-#C-a	先頭に移動
-#C-a	末尾に移動
-#C-k	カーソルから末尾まで削除
-#C-w	単語単位で削除
-#Esc-?	コマンドのパスを表示
-#C-l	クリア
-#M-up	上のディレクトリ
-#M-left	戻る
+## ショートカットキー
+# C-r    履歴から検索
+# Esc-h  man呼び出し
+# Esc-q  現在入力中の文字列を退避
+# C-a    先頭に移動
+# C-a    末尾に移動
+# C-k    カーソルから末尾まで削除
+# C-w    単語単位で削除
+# Esc-?  コマンドのパスを表示
+# C-l    クリア
+# M-up   上のディレクトリ
+# M-left 戻る
 
 
 ################
@@ -25,18 +24,20 @@
 
 #履歴の保存先
 HISTFILE=${HOME}/.zsh_history
-## メモリに展開する履歴の数
+# メモリに展開する履歴の数
 HISTSIZE=10000
-## 保存する履歴の数
+# 保存する履歴の数
 SAVEHIST=10000
+# 重複するコマンド行は古い方を削除
+setopt hist_ignore_all_dups
 #直前と同じコマンドをヒストリに追加しない
 setopt hist_ignore_dups
 #スペースで始まる場合はヒストリに追加しない
 setopt hist_ignore_space
-# すぐにヒストリファイルに追記する
+# 履歴をインクリメンタルに追加
 setopt inc_append_history
 # zshプロセス間でヒストリを共有する
-#setopt share_history
+setopt share_history
 #移動履歴をプッシュ(cd -[Tab]
 setopt auto_pushd
 #移動履歴をキューではなくスタックで番号付け(最近居た場所が上になる)
@@ -45,9 +46,13 @@ setopt pushd_minus
 setopt PUSHD_IGNORE_DUPS
 #重複を優先して削除
 setopt hist_expire_dups_first
+# historyコマンドは履歴に登録しない
+setopt hist_no_store
+# 余分な空白は詰めて記録
+setopt hist_reduce_blanks
 #command not foundの時にはインストール方法を提示
 if [ -f "/etc/zsh_command_not_found" ]; then
-	source /etc/zsh_command_not_found
+    source /etc/zsh_command_not_found
 fi
 #Ctrl-dでログアウトしない
 #setopt ignore_eof
@@ -58,6 +63,12 @@ fi
 ################
 ### 環境変数 ###
 ################
+## 日本語utf-8
+export LANG=ja_JP.UTF-8
+
+## ライブラリパス
+export LD_LIBRARY_PATH=${HOME}/local/lib:${LD_LIBRARY_PATH}
+
 ## Programming contest
 # online-judge-tools: https://github.com/online-judge-tools/oj
 export PATH=$PATH:$HOME/.local/bin
@@ -74,12 +85,6 @@ export GOPATH=$HOME/workspace/goprojects
 
 ## Added by the Heroku Toolbelt
 export PATH="/usr/local/heroku/bin:$PATH"
-
-## 日本語utf-8
-export LANG=ja_JP.UTF-8
-
-## ライブラリパス
-export LD_LIBRARY_PATH=${HOME}/local/lib:${LD_LIBRARY_PATH}
 
 ### 非端末プロセスなら終了 ###
 [ $#PROMPT -eq 0 -o $#TERM -eq 0 ] && return
@@ -99,9 +104,9 @@ local BLUE=$'%{\e[1;34m%}'
 #local LIGHTBLUE=$'%{\e[1;36m%}'
 #local WHITE=$'%{\e[1;37m%}'
 local DEFAULT=$'%{\e[1;m%}'
-	#%n	ユーザー名
-	#%M	コンピュータ名
-	#%c	カレントディレクトリ
+    #%n     ユーザー名
+    #%M     コンピュータ名
+    #%c     カレントディレクトリ
 #通常
 PROMPT=$DEFAULT"%n@%M:"$BLUE"%c"$DEFAULT"$ "
 #複数行
@@ -109,17 +114,17 @@ PROMPT2="%_$ "
 #確認
 SPROMPT="%r is correct? [n,y,a,e]: "
 #右プロンプト
-	#%*	時間
+    #%*     時間
 RPROMPT=$DEFAULT"["$GREEN"%*"$DEFAULT"]"
 #複数行右プロンプト
 #RPROMPT2
 #タイトル
 case "${TERM}" in
 kterm*|xterm*)
-	precmd() {
-		echo -ne "\033]0;`basename ${PWD}`[${PWD}]\007"
-	}
-	;;
+    precmd() {
+        echo -ne "\033]0;`basename ${PWD}`[${PWD}]\007"
+    }
+    ;;
 esac
 #補完候補にもlsと同じ色付き表示
 
@@ -127,12 +132,12 @@ case ${OSTYPE} in
   darwin*) # ここに Mac 向けの設定
     ;;
   linux*)  # ここに Linux 向けの設定
-	eval `dircolors`
-	zstyle ':completion:*:default' list-colors ${LS_COLORS}
-	#kill の候補にも色付き表示
-	zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([%0-9]#)*=0=01;3\
+    eval `dircolors`
+    zstyle ':completion:*:default' list-colors ${LS_COLORS}
+    #kill の候補にも色付き表示
+    zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([%0-9]#)*=0=01;3\
 1'
-	;;
+    ;;
 esac
 
 
@@ -142,7 +147,7 @@ esac
 
 #補完関数用フォルダ
 if [ -d "$HOME/.compfunc" ]; then
-	fpath=(${HOME}/.compfunc ${fpath})
+    fpath=(${HOME}/.compfunc ${fpath})
 fi
 #「/」も単語区切りとみなす。
 WORDCHARS=${WORDCHARS:s,/,,}
@@ -152,45 +157,57 @@ WORDCHARS=${WORDCHARS:s,/,,}
 ### 関数 ###
 ############
 # 上方向へcdする
-# hitode909様より拝借
 function up() {
-	to=$(perl -le '$p=$ENV{PWD}."/";$d="/".$ARGV[0]."/";$r=rindex($p,$d);$r>=0 && print substr($p, 0, $r+length($d))' $1)
-	if [ "$to" = "" ]; then
-		echo "no such file or directory: $1" 1>&2
-		return 1
-	fi
-	cd $to
+    to=$(perl -le '$p=$ENV{PWD}."/";$d="/".$ARGV[0]."/";$r=rindex($p,$d);$r>=0 && print substr($p, 0, $r+length($d))' $1)
+    if [ "$to" = "" ]; then
+        echo "no such file or directory: $1" 1>&2
+        return 1
+    fi
+    cd $to
 }
+
 # 上へ移動する
-# naoya様より拝借
 function cdup() {
-	cd ..
-	zle reset-prompt
+    cd ..
+    zle reset-prompt
 }
+
 ## 戻る
 ## ↑を少し変えただけ
 function cdback() {
-	popd
-	zle reset-prompt
+    popd
+    zle reset-prompt
 }
+
 # nautilusでフォルダ開く
 function naop() {
-	if [ "$#" = "0" ]; then
-		nautilus .
-	else
-		for d in $@
-		do
-			echo "nautilus $d"
-			nautilus $d
-		done
-	fi
+    if [ "$#" = "0" ]; then
+        nautilus .
+    else
+        for d in $@
+        do
+            echo "nautilus $d"
+            nautilus $d
+        done
+    fi
 }
 
 
 ###########
 ## alias ##
 ###########
-alias zcs="zcompile ~/.zshrc && source ~/.zshrc"
+alias zcns="zcompile ~/.zshrc && source ~/.zshrc"
+
+## git
+alias gts="git status"
+alias gtd="git diff"
+alias gta="git add"
+alias gtc="git commit"
+alias gtm="git merge"
+alias gtp="git push"
+alias gtc="git commit"
+alias gtl="git log"
+alias gtco="git checkout"
 
 ## emacs
 alias ekill='emacsclient -e "(kill-emacs)"'
@@ -274,21 +291,21 @@ case ${OSTYPE} in
   darwin*) # ここに Mac 向けの設定
     ;;
   linux*)  # ここに Linux 向けの設定
-	alias ls="ls -FX --color=auto"  #ディレクトリには/, 色つき
+    alias ls="ls -FX --color=auto"  #ディレクトリには/, 色つき
   ;;
 esac
-alias la="ls -a"				#隠しファイルも
-alias ll="ls -lh"				#詳細付き, ファイルサイズに接頭語
-alias lla="ls -lha"				#全部詳細
+alias la="ls -a"                #隠しファイルも
+alias ll="ls -lh"               #詳細付き, ファイルサイズに接頭語
+alias lla="ls -lha"                 #全部詳細
 #alias lls='ls -l --sort=extension --color=tty'
 
 #mv
 alias mv='mv -i'
 #cp
-alias cp="cp -i"	#上書きを確認
+alias cp="cp -i"    #上書きを確認
 #rm
 if type trash-put > /dev/null ; then
-	alias rm="trash-put"
+    alias rm="trash-put"
 fi
 
 #alias rm='rm -i'
@@ -331,7 +348,6 @@ alias -g andclip="|(cat 1>&2|xsel -bi)2>&1"
 #stdout+stderrをクリップボードとstdoutへ
 alias -g andclipall=" 2>&1|(cat 1>&2|xsel -bi)2>&1"
 
-
 #打ち間違い対策
 alias s="ls"
 alias l="ls"
@@ -352,7 +368,7 @@ alias -g LS="ls"
 ####################
 # HOME
 bindkey '^[OH' beginning-of-line
-bindkey	'^[OF' end-of-line
+bindkey '^[OF' end-of-line
 # Delete
 bindkey '^[[3~' delete-char
 
@@ -391,13 +407,13 @@ zstyle ':completion:*:cd:*' tag-order local-directories directory-stack path-dir
 [ -r ~/.ssh/known_hosts ] && _ssh_hosts=(${${${${(f)"$(<$HOME/.ssh/known_hosts)"}:#[\|]*}%%\ *}%%,*}) || _ssh_hosts=()
 [ -r /etc/hosts ] && : ${(A)_etc_hosts:=${(s: :)${(ps:\t:)${${(f)~~"$(</etc/hosts)"}%%\#*}##[:blank:]#[^[:blank:]]#}}} || _etc_hosts=()
 hosts=(
-	"$_ssh_hosts[@]"
-	"$_etc_hosts[@]"
-	`hostname`
-	localhost
+    "$_ssh_hosts[@]"
+    "$_etc_hosts[@]"
+    `hostname`
+    localhost
 )
 zstyle ':completion:*:hosts' hosts $hosts
-#	補完の時に大文字小文字を区別しない(但し、大文字を打った場合は小文字に変換しない)
+#補完の時に大文字小文字を区別しない(但し、大文字を打った場合は小文字に変換しない)
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
 #矢印キー補完選択
 zstyle ':completion:*:default' menu select
@@ -407,8 +423,8 @@ zstyle ':completion:*:default' menu select
 #自動cd(cdなしでおｋ
 setopt auto_cd
 #コマンド修正提示
-#setopt correct		#通常
-setopt correct_all	#ファイル名まで考慮
+#setopt correct         #通常
+setopt correct_all  #ファイル名まで考慮
 #補完候補が複数ある時に、一覧表示する
 setopt auto_list
 #タブキー連打で補完候補を順に表示
@@ -433,26 +449,17 @@ unsetopt promptcr
 ## その他 ##
 ############
 
-#python ~/bin/oblique.py
-#~/bin/tml --counts
-if [ -f ${HOME}/git/workspace/utisamvps/utisamvps/static/tt.html ]; then
-	alias todo='gedit ${HOME}/git/workspace/utisamvps/utisamvps/static/tt.html'
-fi
-[[ -s /etc/profile.d/autojump.sh ]] && . /etc/profile.d/autojump.sh
-
-
 ### for Mac
 ## zsh
-# zsh-completions
 case ${OSTYPE} in
-	darwin*) # ここに Mac 向けの設定
-		alias e="open -a emacs"
-		fpath=(/usr/local/share/zsh-completions $fpath)
-		export PATH="/usr/local/bin:$PATH"
-		export HOMEBREW_CASK_OPTS="--appdir=/Applications"
-		;;
-	linux*)  # ここに Linux 向けの設定
-		;;
+    darwin*) # ここに Mac 向けの設定
+        alias e="open -a emacs"
+        fpath=(/usr/local/share/zsh-completions $fpath)
+        export PATH="/usr/local/bin:$PATH"
+        export HOMEBREW_CASK_OPTS="--appdir=/Applications"
+        ;;
+    linux*)  # ここに Linux 向けの設定
+        ;;
 esac
 
 ## CUDA and cuDNN paths
