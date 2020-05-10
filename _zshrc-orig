@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-## 変更後はコンパイル & 設定 (alias -> zcns)
+## 変更後はコンパイル & 設定 (alias -> zns)
 # コンパイル: $ zcompile ~/.zshrc
 # 設定:       $ source ~/.zshrc
 
@@ -173,7 +173,7 @@ function naop() {
 ## alias ##
 ###########
 ## zcompile and source
-alias zcns="zcompile ~/.zshrc && source ~/.zshrc"
+alias zns="zcompile ~/.zshrc && source ~/.zshrc"
 
 ## git
 alias gts="git status"

@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-## 変更後はコンパイル & 設定 (alias -> zcns)
+## 変更後はコンパイル & 設定 (alias -> zns)
 # コンパイル: $ zcompile ~/.zshrc
 # 設定:       $ source ~/.zshrc
 
@@ -196,7 +196,7 @@ function naop() {
 ###########
 ## alias ##
 ###########
-alias zcns="zcompile ~/.zshrc && source ~/.zshrc"
+alias zns="zcompile ~/.zshrc && source ~/.zshrc"
 
 ## git
 alias gts="git status"
@@ -227,8 +227,8 @@ alias a="./a.out"
 alias g++11="g++ -std=c++11"
 
 ## Programming Contest
-alias gt="g++ main.cpp && oj t"
-alias ga="g++ main.cpp && ./a.out"
+alias gna="g++ main.cpp && ./a.out" # g++ and a.out
+alias gojt="g++ main.cpp && oj t"    # g++ and oj t
 
 ## PDFviewer: 現在主に使っているPDFviewrを設定
 alias pdfviewer="zathura"
