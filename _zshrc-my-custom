@@ -474,7 +474,7 @@ umask 022
 # export DISPLAY=localhost:0.0
 
 # for WSL2 (by windwos's ipconfig)
-export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0.0
 
 ## japanese input on GUI: https://ahiru8usagi.hatenablog.com/entry/WSL_GUIApps_Japanese
 export GTK_IM_MODULE=fcitx
