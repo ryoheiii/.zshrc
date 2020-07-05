@@ -102,10 +102,10 @@ case ${OSTYPE} in
         ### WSL Linux
         ## X Window Server: https://ja.osdn.net/projects/sfnet_xming/
         # for WSL1
-        # export DISPLAY=localhost:0.0
+        export DISPLAY=localhost:0.0
 
         # for WSL2 (by windwos's ipconfig)
-        export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0.0
+        # export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0.0
 
         ## Windoes Softs: https://qiita.com/python_walker/items/41894c952ee06b018994
         # path
@@ -261,8 +261,8 @@ alias a="./a.out"
 alias g++11="g++ -std=c++11"
 
 ## Programming Contest
-alias gna="g++ main.cpp && ./a.out" # g++ and a.out
-alias gojt="g++ main.cpp && oj t"    # g++ and oj t
+alias gna="g++ -std=c++11 main.cpp && ./a.out" # g++ and a.out
+alias gnojt="g++ -std=c++11 main.cpp && oj t"    # g++ and oj t
 
 ## PDFviewer: 現在主に使っているPDFviewrを設定
 alias pdfviewer="zathura"
