@@ -69,11 +69,6 @@ export LANG=ja_JP.UTF-8
 ## ライブラリパス
 export LD_LIBRARY_PATH=${HOME}/local/lib:${LD_LIBRARY_PATH}
 
-## CUDA and cuDNN paths
-export CUDA_HOME=/usr/local/cuda-8.0
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${CUDA_HOME}/lib64
-export PATH=$PATH:${CUDA_HOME}/bin
-
 ## Programming contest
 # online-judge-tools: https://github.com/online-judge-tools/oj
 export PATH=$PATH:$HOME/.local/bin
@@ -90,36 +85,6 @@ export GOPATH=$HOME/workspace/goprojects
 
 ## Added by the Heroku Toolbelt
 export PATH="/usr/local/heroku/bin:$PATH"
-
-### Environmentally Dependent (Environmental variable)
-case ${OSTYPE} in
-    darwin*) ### Mac
-        fpath=(/usr/local/share/zsh-completions $fpath)
-        export PATH="/usr/local/bin:$PATH"
-        export HOMEBREW_CASK_OPTS="--appdir=/Applications"
-        ;;
-    linux*)  ### Linux
-        ### WSL Linux
-        ## X Window Server: https://ja.osdn.net/projects/sfnet_xming/
-        # for WSL1
-        export DISPLAY=localhost:0.0
-
-        # for WSL2 (by windwos's ipconfig)
-        # export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0.0
-
-        ## Windoes Softs: https://qiita.com/python_walker/items/41894c952ee06b018994
-        # path
-        export PATH=$PATH:/mnt/c/Program\ Files\ \(x86\)/Microsoft\ Office/root/Office16
-        export PATH=$PATH:/mnt/c/Program\ Files\ \(x86\)/Adobe/Acrobat\ 11.0/Acrobat
-        export PATH=$PATH:/mnt/c/Program\ Files/Mozilla\ Firefox/
-
-        ## japanese input on GUI: https://ahiru8usagi.hatenablog.com/entry/WSL_GUIApps_Japanese
-        export GTK_IM_MODULE=fcitx
-        export QT_IM_MODULE=fcitx
-        export XMODIFIERS=@im=fcitx
-        export DefaultIMModule=fcitx
-        ;;
-esac
 
 ### 非端末プロセスなら終了 ###
 [ $#PROMPT -eq 0 -o $#TERM -eq 0 ] && return
@@ -261,8 +226,8 @@ alias a="./a.out"
 alias g++11="g++ -std=c++11"
 
 ## Programming Contest
-alias gna="g++ -std=c++11 main.cpp && ./a.out" # g++ and a.out
-alias gnojt="g++ -std=c++11 main.cpp && oj t"    # g++ and oj t
+alias gna="g++ main.cpp && ./a.out" # g++ and a.out
+alias gojt="g++ main.cpp && oj t"    # g++ and oj t
 
 ## PDFviewer: 現在主に使っているPDFviewrを設定
 alias pdfviewer="zathura"
@@ -396,20 +361,6 @@ alias em="emacs"
 alias -g sl="ls"
 alias -g LS="ls"
 
-### Environmentally Dependent (alias)
-case ${OSTYPE} in
-    darwin*) ### Mac
-        alias e="open -a emacs"
-        ;;
-    linux*)  ### Linux
-        ### WSL Linux
-        alias ppt='POWERPNT.EXE'
-        alias exl='EXCEL.EXE'
-        alias word='WINWORD.EXE'
-        alias adobe='AcroRd32.exe'
-        alias fx='firefox.exe'
-        ;;
-esac
 
 ####################
 ### キーバインド ###
@@ -496,12 +447,49 @@ unsetopt promptcr
 ############
 ## その他 ##
 ############
-### Environmentally Dependent (others)
+
+### for Mac
+## zsh
 case ${OSTYPE} in
-    darwin*) ### Mac
+    darwin*) # ここに Mac 向けの設定
+        alias e="open -a emacs"
+        fpath=(/usr/local/share/zsh-completions $fpath)
+        export PATH="/usr/local/bin:$PATH"
+        export HOMEBREW_CASK_OPTS="--appdir=/Applications"
         ;;
-    linux*)  ### Linux
-        ### WSL Linux
-        umask 022
+    linux*)  # ここに Linux 向けの設定
         ;;
 esac
+
+## CUDA and cuDNN paths
+export CUDA_HOME=/usr/local/cuda-8.0
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${CUDA_HOME}/lib64
+export PATH=$PATH:${CUDA_HOME}/bin
+
+### WSL
+umask 022
+
+## X Window Server: https://ja.osdn.net/projects/sfnet_xming/
+# for WSL1
+# export DISPLAY=localhost:0.0
+
+# for WSL2 (by windwos's ipconfig)
+export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+
+## japanese input on GUI: https://ahiru8usagi.hatenablog.com/entry/WSL_GUIApps_Japanese
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
+export DefaultIMModule=fcitx
+
+## Windoes Softs: https://qiita.com/python_walker/items/41894c952ee06b018994
+# path
+export PATH=$PATH:/mnt/c/Program\ Files\ \(x86\)/Microsoft\ Office/root/Office16
+export PATH=$PATH:/mnt/c/Program\ Files\ \(x86\)/Adobe/Acrobat\ 11.0/Acrobat
+export PATH=$PATH:/mnt/c/Program\ Files/Mozilla\ Firefox/
+# alias
+alias ppt='POWERPNT.EXE'
+alias exl='EXCEL.EXE'
+alias word='WINWORD.EXE'
+alias adobe='AcroRd32.exe'
+alias fx='firefox.exe'
