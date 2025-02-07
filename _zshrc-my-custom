@@ -209,8 +209,11 @@ alias gtl="git log"
 alias gtco="git checkout"
 
 ## emacs
-alias ekill='emacsclient -e "(kill-emacs)"'
-alias emacs='emacs -nw'
+alias ekill="emacsclient -e '(kill-emacs)'"
+alias erestart="ekill && estart"
+alias e="emacsclient -nw -a ''"
+alias emacs="emacs -nw"
+export EDITOR="emacsclient -nw -a ''"
 
 ## nkf
 # ファイルを指定の文字コードで上書き
@@ -460,6 +463,17 @@ case ${OSTYPE} in
     linux*)  # ここに Linux 向けの設定
         ;;
 esac
+
+function estart() {
+  if ! emacsclient -e 0 > /dev/null 2>&1; then
+    ({
+      cd
+      emacs --daemon
+      cd -
+    } > /dev/null 2>&1 & )
+  fi
+}
+estart # シェル起動時にEmacsデーモンも起動する
 
 ## CUDA and cuDNN paths
 export CUDA_HOME=/usr/local/cuda-8.0
