@@ -226,31 +226,23 @@ export GREP_OPTIONS="--color=auto"
 #ln
 alias ln="ln -i -v"
 #拡張子で自動化
-# alias -s c=gedit
-# alias -s C=gedit
-# alias -s cpp=gedit
-# alias -s h=gedit
 alias -s c=emacs
 alias -s C=emacs
 alias -s cpp=emacs
 alias -s h=emacs
 
-#alias -s html=google-chrome
 alias -s html=firefox
 
-# alias -s java=gedit
 alias -s java=emacs
 
 #alias -s pdf=google-chrome
 alias -s pdf=firefox
 
-# alias -s txt=gedit
 alias -s txt=emacs
 
 #alias -s xhtml=google-chrome
 alias -s xhtml=firefox
 
-# alias -s xml=gedit
 alias -s xml=emacs
 
 alias -s zip=zipinfo
