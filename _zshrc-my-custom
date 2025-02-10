@@ -438,7 +438,7 @@ function estart() {
     } > /dev/null 2>&1 & )
   fi
 }
-estart # シェル起動時にEmacsデーモンも起動する
+# estart # シェル起動時にEmacsデーモンも起動する
 
 ### WSL
 umask 022
