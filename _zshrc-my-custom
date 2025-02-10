@@ -69,26 +69,17 @@ export LANG=ja_JP.UTF-8
 ## ライブラリパス
 export LD_LIBRARY_PATH=${HOME}/local/lib:${LD_LIBRARY_PATH}
 
-## Programming contest
-# online-judge-tools: https://github.com/online-judge-tools/oj
+## ローカルバイナリパス
 export PATH=$PATH:$HOME/.local/bin
 
 ## color
 export TERM=xterm-256color
 
-## cpputest: brewでインストールしたものでなく、git cloneしたものを使用
-export CPPUTEST_HOME=~/tools/cpputest
-
-## go言語
-export PATH=$PATH:/usr/local/go/bin
-export GOPATH=$HOME/workspace/goprojects
-
-## Added by the Heroku Toolbelt
-export PATH="/usr/local/heroku/bin:$PATH"
+## emacs
+export EDITOR="emacsclient -nw -a ''"
 
 ### 非端末プロセスなら終了 ###
 [ $#PROMPT -eq 0 -o $#TERM -eq 0 ] && return
-
 
 #################
 ### プロンプト ##
@@ -213,7 +204,6 @@ alias ekill="emacsclient -e '(kill-emacs)'"
 alias erestart="ekill && estart"
 alias e="emacsclient -nw -a ''"
 alias emacs="emacs -nw"
-export EDITOR="emacsclient -nw -a ''"
 
 ## nkf
 # ファイルを指定の文字コードで上書き
@@ -236,29 +226,11 @@ alias gojt="g++ main.cpp && oj t"    # g++ and oj t
 alias pdfviewer="zathura"
 alias pdfediter="pdfshuffler"
 
-## htags
-alias htags-html="htags -saF"
-
 ## gtags
 #alias gtags-table="gtags --gtagslabel=plugin-example"
 # gtags のみ（オプションなし）で動く場合あり
 alias gtags-table="gtags --gtagslabel=exuberant-ctags"
 alias gtags-clear="rm -v GPATH GRTAGS GTAGS"
-
-## mysql
-alias mysql_login_ryohei="mysql -u ryohei -p"
-alias mysql_login_root="mysql -u root -p"
-alias mysql_login_brs="mysql -u brs -p"
-alias mysql-config="sudo emacs /etc/mysql/my.conf"
-alias mysql-restart="sudo service mysql restart"
-
-## tomcat関連のエイリアス
-alias tomcatStart="sudo service tomcat7 start"
-alias tomcatStop="sudo service tomcat7 stop"
-
-## javaバージョン切り替えのためのエイリアス
-alias javaVerCh="sudo update-alternatives --config java"
-alias javacVerCh="sudo update-alternatives --config javac"
 
 ## apt系のエイリアス
 alias aptupd="sudo apt update"
@@ -319,28 +291,20 @@ alias rmgtags='rm -v GPATH GRTAGS GTAGS'
 alias ln="ln -i -v"
 
 #拡張子で自動化
-# alias -s c=gedit
-# alias -s C=gedit
-# alias -s cpp=gedit
-# alias -s h=gedit
 alias -s c=emacs
 alias -s C=emacs
 alias -s cpp=emacs
 alias -s h=emacs
 #alias -s html=google-chrome
 alias -s html=firefox
-# alias -s java=gedit
 alias -s java=emacs
 #alias -s pdf=google-chrome
 alias -s pdf=firefox
-# alias -s txt=gedit
 alias -s txt=emacs
 #alias -s xhtml=google-chrome
 alias -s xhtml=firefox
-# alias -s xml=gedit
 alias -s xml=emacs
 alias -s zip=zipinfo
-#sudo用gedit
 #stdoutをクリップボードへ
 alias -g toclip="|xsel -bi"
 #stdout+stderrをクリップボードへ
@@ -451,7 +415,7 @@ unsetopt promptcr
 ## その他 ##
 ############
 
-### for Mac
+## for Mac
 ## zsh
 case ${OSTYPE} in
     darwin*) # ここに Mac 向けの設定
@@ -464,6 +428,7 @@ case ${OSTYPE} in
         ;;
 esac
 
+## emacs
 function estart() {
   if ! emacsclient -e 0 > /dev/null 2>&1; then
     ({
@@ -474,11 +439,6 @@ function estart() {
   fi
 }
 estart # シェル起動時にEmacsデーモンも起動する
-
-## CUDA and cuDNN paths
-export CUDA_HOME=/usr/local/cuda-8.0
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${CUDA_HOME}/lib64
-export PATH=$PATH:${CUDA_HOME}/bin
 
 ### WSL
 umask 022
@@ -512,7 +472,3 @@ alias exl='EXCEL.EXE'
 alias word='WINWORD.EXE'
 alias adobe='AcroRd32.exe'
 alias fx='firefox.exe'
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
