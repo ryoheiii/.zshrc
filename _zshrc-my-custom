@@ -212,7 +212,8 @@ alias gtco="git checkout"
 ## emacs
 alias ekill="emacsclient -e '(kill-emacs)'"
 alias erestart="ekill && estart"
-alias e="emacsclient -nw -a ''"
+alias ecli="emacsclient -nw -a ''"
+alias e="emacs"
 alias emacs="emacs -nw"
 
 ## nkf
