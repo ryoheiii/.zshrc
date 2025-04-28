@@ -474,12 +474,12 @@ export DefaultIMModule=fcitx
 
 ## Windoes Softs: https://qiita.com/python_walker/items/41894c952ee06b018994
 # path
-export PATH=$PATH:/mnt/c/Program\ Files\ \(x86\)/Microsoft\ Office/root/Office16
+export PATH=$PATH:/mnt/c/Program\ Files/Microsoft\ Office/root/Office16
 export PATH=$PATH:/mnt/c/Program\ Files\ \(x86\)/Adobe/Acrobat\ 11.0/Acrobat
 export PATH=$PATH:/mnt/c/Program\ Files/Mozilla\ Firefox/
 # alias
 alias ppt='POWERPNT.EXE'
 alias exl='EXCEL.EXE'
 alias word='WINWORD.EXE'
-alias adobe='AcroRd32.exe'
+alias adobe='Acrobat.exe'
 alias fx='firefox.exe'
