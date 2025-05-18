@@ -69,10 +69,6 @@ export LANG=ja_JP.UTF-8
 ### .local 関連
 ## 実行バイナリパス
 export PATH="$HOME/.local/bin:$PATH"
-## manページパス
-export MANPATH="$HOME/.local/share/man:${MANPATH:-/usr/local/share/man:/usr/share/man}"
-## Info マニュアル
-export INFOPATH="$HOME/.local/share/info:${INFOPATH:-/usr/local/share/info:/usr/share/info}"
 
 ## color
 export TERM=xterm-256color
@@ -225,13 +221,7 @@ alias g++11="g++ -std=c++11"
 alias gna="g++ main.cpp && ./a.out" # g++ and a.out
 alias gojt="g++ main.cpp && oj t"    # g++ and oj t
 
-## PDFviewer: 現在主に使っているPDFviewrを設定
-alias pdfviewer="zathura"
-alias pdfediter="pdfshuffler"
-
 ## gtags
-#alias gtags-table="gtags --gtagslabel=plugin-example"
-# gtags のみ（オプションなし）で動く場合あり
 alias gtags-table="gtags --gtagslabel=exuberant-ctags"
 alias gtags-clear="rm -v GPATH GRTAGS GTAGS"
 
@@ -273,7 +263,7 @@ case ${OSTYPE} in
 esac
 alias la="ls -a"                #隠しファイルも
 alias ll="ls -lh"               #詳細付き, ファイルサイズに接頭語
-alias lla="ls -lha"                 #全部詳細
+alias lla="ls -lha"             #全部詳細
 #alias lls='ls -l --sort=extension --color=tty'
 
 #mv
@@ -326,8 +316,6 @@ alias cd..="cd .."
 alias emasc="emacs"
 alias em="emacs"
 ##sl
-#alias -g sl="echo you are an idiot!"
-#alias -g LS="ECHO YOU ARE AN IDIOT!"
 alias -g sl="ls"
 alias -g LS="ls"
 
@@ -457,12 +445,6 @@ export DISPLAY=:0
 export LC_ALL=ja_JP.UTF-8
 export LANG=ja_JP.UTF-8
 export XAUTHORITY=~/.Xauthority
-
-## japanese input on GUI: https://ahiru8usagi.hatenablog.com/entry/WSL_GUIApps_Japanese
-export GTK_IM_MODULE=fcitx
-export QT_IM_MODULE=fcitx
-export XMODIFIERS=@im=fcitx
-export DefaultIMModule=fcitx
 
 ## Windoes Softs: https://qiita.com/python_walker/items/41894c952ee06b018994
 # path
