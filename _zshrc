@@ -50,6 +50,8 @@ setopt hist_expire_dups_first
 setopt hist_no_store
 # 余分な空白は詰めて記録
 setopt hist_reduce_blanks
+# 対話入力でも # 以降をコメントとして扱う
+setopt INTERACTIVE_COMMENTS
 #command not foundの時にはインストール方法を提示
 if [ -f "/etc/zsh_command_not_found" ]; then
     source /etc/zsh_command_not_found
@@ -63,18 +65,41 @@ fi
 ################
 ### 環境変数 ###
 ################
+## コマンドがあるか調べる (以降のガードで使う。PATH 上の実行ファイルだけを見て、alias・関数は数えない)
+# WSL の Windows 側の PATH (/mnt/c など) は探さない。探すと無いコマンド 1 つにつき 0.1 秒前後かかる
+# 判定は起動時の 1 回だけなので、後から入れたツールは新しいシェル (か zns) で有効になる
+function __zshrc_has() {
+    local d
+    for d in ${path:#/mnt/[a-z]/*}; do
+        [[ -f $d/$1 && -x $d/$1 ]] && return 0
+    done
+    return 1
+}
+
 ## 日本語utf-8
 export LANG=ja_JP.UTF-8
+
+## ライブラリパス (~/local/lib がある場合だけ。元の値が空のとき末尾に : を付けない)
+if [ -d "$HOME/local/lib" ]; then
+    export LD_LIBRARY_PATH="$HOME/local/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
 
 ### .local 関連
 ## 実行バイナリパス
 export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/share/fnm:$PATH"
+# fnm (Node.js のバージョン管理) がある場合だけ設定する (--shell zsh: シェルの推定に ps を使わせない)
+if __zshrc_has fnm; then
+    eval "$(fnm env --shell zsh)"
+fi
 
 ## color
 export TERM=xterm-256color
 
-## emacs
-export EDITOR="emacsclient -nw -a ''"
+## emacs (emacsclient がある場合だけ)
+if __zshrc_has emacsclient; then
+    export EDITOR="emacsclient -nw -a ''"
+fi
 
 ### 非端末プロセスなら終了 ###
 [ $#PROMPT -eq 0 -o $#TERM -eq 0 ] && return
@@ -121,11 +146,11 @@ case ${OSTYPE} in
   darwin*) # ここに Mac 向けの設定
     ;;
   linux*)  # ここに Linux 向けの設定
-    eval `dircolors`
-    zstyle ':completion:*:default' list-colors ${LS_COLORS}
-    #kill の候補にも色付き表示
-    zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([%0-9]#)*=0=01;3\
-1'
+    # dircolors がある場合だけ (-b: SHELL の値に関係なく sh 形式で出力させる)
+    if __zshrc_has dircolors; then
+        eval `dircolors -b`
+        zstyle ':completion:*:default' list-colors ${LS_COLORS}
+    fi
     ;;
 esac
 
@@ -168,23 +193,26 @@ function cdback() {
     zle reset-prompt
 }
 
-# nautilusでフォルダ開く
-function naop() {
-    if [ "$#" = "0" ]; then
-        nautilus .
-    else
-        for d in $@
-        do
-            echo "nautilus $d"
-            nautilus $d
-        done
-    fi
-}
+# nautilusでフォルダ開く (nautilus がある場合だけ)
+if __zshrc_has nautilus; then
+    function naop() {
+        if [ "$#" = "0" ]; then
+            nautilus .
+        else
+            for d in $@
+            do
+                echo "nautilus $d"
+                nautilus $d
+            done
+        fi
+    }
+fi
 
 
 ###########
 ## alias ##
 ###########
+## zcompile and source
 alias zns="zcompile ~/.zshrc && source ~/.zshrc"
 
 ## git
@@ -197,49 +225,61 @@ alias gtp="git push"
 alias gtl="git log"
 alias gtco="git checkout"
 
-## emacs
-alias ekill="emacsclient -e '(kill-emacs)'"
-alias erestart="ekill && estart"
-alias ecli="emacsclient -nw -a ''"
-alias e="emacs -nw"
-# alias emacs="emacs -nw"
+## emacs (emacs がある場合だけ。erestart が使う estart も「その他」節で同じ条件にしている)
+if __zshrc_has emacs; then
+    alias ekill="emacsclient -e '(kill-emacs)'"
+    alias erestart="ekill && estart"
+    alias ecli="emacsclient -nw -a ''"
+    alias e="emacs -nw"
+    # alias emacs="emacs -nw"
+fi
 
-## nkf
+## nkf (nkf がある場合だけ)
 # ファイルを指定の文字コードで上書き
-alias nkfutf8="nkf -w --overwrite "
-alias nkfsjis="nkf -s --overwrite "
+if __zshrc_has nkf; then
+    alias nkfutf8="nkf -w --overwrite "
+    alias nkfsjis="nkf -s --overwrite "
+fi
 
-## cp関連
-alias cpmake="cp ~/Dropbox/data/template/make/C_and_C++/Makefile ."
+## cp関連 (テンプレートの Makefile がある場合だけ)
+if [ -f "$HOME/Dropbox/data/template/make/C_and_C++/Makefile" ]; then
+    alias cpmake="cp ~/Dropbox/data/template/make/C_and_C++/Makefile ."
+fi
 
-## g++関連
-alias g="g++"
-alias a="./a.out"
-alias g++11="g++ -std=c++11"
+## g++関連 (g++ がある場合だけ)
+if __zshrc_has g++; then
+    alias g="g++"
+    alias a="./a.out"
+    alias g++11="g++ -std=c++11"
+fi
 
-## Programming Contest
-alias gna="g++ main.cpp && ./a.out" # g++ and a.out
-alias gojt="g++ main.cpp && oj t"    # g++ and oj t
+## Programming Contest (g++ がある場合だけ。gojt は oj も要る)
+if __zshrc_has g++; then
+    alias gna="g++ main.cpp && ./a.out" # g++ and a.out
+    if __zshrc_has oj; then
+        alias gojt="g++ main.cpp && oj t"    # g++ and oj t
+    fi
+fi
 
-## gtags
-alias gtags-table="gtags --gtagslabel=exuberant-ctags"
-alias gtags-clear="rm -v GPATH GRTAGS GTAGS"
+## gtags (gtags がある場合だけ。gtags-clear と rmgtags は同じコマンド)
+if __zshrc_has gtags; then
+    alias gtags-table="gtags --gtagslabel=exuberant-ctags"
+    alias gtags-clear="rm -v GPATH GRTAGS GTAGS"
+    alias rmgtags='rm -v GPATH GRTAGS GTAGS'
+fi
 
-## apt系のエイリアス
-alias aptupd="sudo apt update"
-alias aptupg="sudo apt upgrade"
-alias aptrem="sudo apt autoremove"
-alias aptcle="sudo apt autoclean"
-alias aptins="sudo apt install"
+## apt系のエイリアス (apt がある場合だけ)
+if __zshrc_has apt; then
+    alias aptupd="sudo apt update"
+    alias aptupg="sudo apt upgrade"
+    alias aptrem="sudo apt autoremove"
+    alias aptcle="sudo apt autoclean"
+    alias aptins="sudo apt install"
+fi
 
 ## reboot, poweroff関連
 alias poweroff="sudo poweroff"
 alias reboot="sudo reboot"
-
-## 移動履歴
-# cd -[tab] で，移動履歴を参照し，再利用できる．
-setopt auto_pushd
-setopt pushd_ignore_dups
 
 ## グローバルエイリアス
 # ex. grep "hogehoge" ./* W -l
@@ -253,7 +293,6 @@ alias -g W='| wc'
 alias -g X='| xargs'
 
 #ls
-alias l='ls -CF'
 case ${OSTYPE} in
   darwin*) # ここに Mac 向けの設定
     ;;
@@ -271,41 +310,53 @@ alias mv='mv -i'
 #cp
 alias cp="cp -i"    #上書きを確認
 #rm
-if type trash-put > /dev/null ; then
+if __zshrc_has trash-put; then
     alias rm="trash-put"
 fi
 
 #alias rm='rm -i'
 alias rm='rm -v'
 alias rmtmp='rm -v *~ #*#'
-alias rmgtags='rm -v GPATH GRTAGS GTAGS'
 
 #ln
 alias ln="ln -i -v"
 
-#拡張子で自動化
-alias -s c=emacs
-alias -s C=emacs
-alias -s cpp=emacs
-alias -s h=emacs
-#alias -s html=google-chrome
-alias -s html=firefox
-alias -s java=emacs
-#alias -s pdf=google-chrome
-alias -s pdf=firefox
-alias -s txt=emacs
-#alias -s xhtml=google-chrome
-alias -s xhtml=firefox
-alias -s xml=emacs
-alias -s zip=zipinfo
-#stdoutをクリップボードへ
-alias -g toclip="|xsel -bi"
-#stdout+stderrをクリップボードへ
-alias -g toclipall=" 2>&1|xsel -bi"
-#stdoutをクリップボードとstdoutへ
-alias -g andclip="|(cat 1>&2|xsel -bi)2>&1"
-#stdout+stderrをクリップボードとstdoutへ
-alias -g andclipall=" 2>&1|(cat 1>&2|xsel -bi)2>&1"
+#拡張子で自動化 (開くコマンドがある場合だけ)
+if __zshrc_has emacs; then
+    alias -s c=emacs
+    alias -s C=emacs
+    alias -s cpp=emacs
+    alias -s h=emacs
+    alias -s java=emacs
+    alias -s txt=emacs
+    alias -s xml=emacs
+fi
+if __zshrc_has firefox; then
+    #alias -s html=google-chrome
+    alias -s html=firefox
+    #alias -s pdf=google-chrome
+    alias -s pdf=firefox
+    #alias -s xhtml=google-chrome
+    alias -s xhtml=firefox
+fi
+if __zshrc_has zipinfo; then
+    alias -s zip=zipinfo
+fi
+## クリップボード (xsel がある場合だけ)
+if __zshrc_has xsel; then
+    #stdoutをクリップボードへ
+    alias -g toclip="|xsel -bi"
+    #stdout+stderrをクリップボードへ
+    alias -g toclipall=" 2>&1|xsel -bi"
+    #stdoutをクリップボードとstdoutへ
+    alias -g andclip="|(cat 1>&2|xsel -bi)2>&1"
+    #stdout+stderrをクリップボードとstdoutへ
+    alias -g andclipall=" 2>&1|(cat 1>&2|xsel -bi)2>&1"
+fi
+#gnome-open (gnome-open があり、Go 言語の go が無い場合だけ)
+if __zshrc_has gnome-open && ! __zshrc_has go; then
+    alias go="gnome-open"
+fi
 
 #打ち間違い対策
 alias s="ls"
@@ -313,8 +364,10 @@ alias l="ls"
 alias ks="ls"
 alias lsa="la"
 alias cd..="cd .."
-alias emasc="emacs"
-alias em="emacs"
+if __zshrc_has emacs; then
+    alias emasc="emacs"
+    alias em="emacs"
+fi
 ##sl
 alias -g sl="ls"
 alias -g LS="ls"
@@ -366,7 +419,8 @@ zstyle ':completion:*:cd:*' tag-order local-directories directory-stack path-dir
 hosts=(
     "$_ssh_hosts[@]"
     "$_etc_hosts[@]"
-    `hostname`
+    # 自ホスト名は hostname コマンドではなく zsh の $HOST を使う (hostname が無い環境でもエラーにしない。環境変数 HOST が無ければ同じ値)
+    $HOST
     localhost
 )
 zstyle ':completion:*:hosts' hosts $hosts
@@ -410,7 +464,10 @@ unsetopt promptcr
 ## zsh
 case ${OSTYPE} in
     darwin*) # ここに Mac 向けの設定
-        alias e="open -a emacs"
+        # GUI の Emacs.app がある場合だけ、e で Emacs.app を開く (無ければ alias 節の emacs -nw のまま。emacs コマンドも無ければ e は定義されない)
+        if [ -d /Applications/Emacs.app ] || [ -d "$HOME/Applications/Emacs.app" ]; then
+            alias e="open -a emacs"
+        fi
         fpath=(/usr/local/share/zsh-completions $fpath)
         export PATH="/usr/local/bin:$PATH"
         export HOMEBREW_CASK_OPTS="--appdir=/Applications"
@@ -419,41 +476,50 @@ case ${OSTYPE} in
         ;;
 esac
 
-## emacs
-function estart() {
-  if ! emacsclient -e 0 > /dev/null 2>&1; then
-    ({
-      cd
-      emacs --daemon
-      cd -
-    } > /dev/null 2>&1 & )
-  fi
-}
-# estart # シェル起動時にEmacsデーモンも起動する
+## emacs (emacs がある場合だけ。alias 節の erestart が使う)
+if __zshrc_has emacs; then
+    function estart() {
+      if ! emacsclient -e 0 > /dev/null 2>&1; then
+        ({
+          cd
+          emacs --daemon
+          cd -
+        } > /dev/null 2>&1 & )
+      fi
+    }
+    # estart # シェル起動時にEmacsデーモンも起動する
+fi
 
 ### WSL
-umask 022
+# WSL のときだけ設定する (wsl.exe から起動したシェルは WSL_DISTRO_NAME を持つ。ssh などで持たないときはカーネル名で判定する)
+if [[ -n $WSL_DISTRO_NAME || ( -r /proc/sys/kernel/osrelease && "$(</proc/sys/kernel/osrelease)" == *[Mm]icrosoft* ) ]]; then
+    umask 022
 
-## X Window Server: https://ja.osdn.net/projects/sfnet_xming/
-# for WSL1
-# export DISPLAY=localhost:0.0
+    ## X Window Server: https://ja.osdn.net/projects/sfnet_xming/
+    # for WSL1
+    # export DISPLAY=localhost:0.0
 
-# for WSL2 (by windwos's ipconfig)
-# export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
-export DISPLAY=:0
+    # for WSL2 (by windwos's ipconfig)
+    # export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+    export DISPLAY=:0
 
-export LC_ALL=ja_JP.UTF-8
-export LANG=ja_JP.UTF-8
-export XAUTHORITY=~/.Xauthority
+    export LC_ALL=ja_JP.UTF-8
+    # X の認証ファイル (ある場合だけ)
+    if [ -f "$HOME/.Xauthority" ]; then
+        export XAUTHORITY="$HOME/.Xauthority"
+    fi
+fi
 
-## Windoes Softs: https://qiita.com/python_walker/items/41894c952ee06b018994
-# path
-export PATH=$PATH:/mnt/c/Program\ Files/Microsoft\ Office/root/Office16
-export PATH=$PATH:/mnt/c/Program\ Files\ \(x86\)/Adobe/Acrobat\ 11.0/Acrobat
-export PATH=$PATH:/mnt/c/Program\ Files/Mozilla\ Firefox/
-# alias
-alias ppt='POWERPNT.EXE'
-alias exl='EXCEL.EXE'
-alias word='WINWORD.EXE'
-alias adobe='Acrobat.exe'
-alias fx='firefox.exe'
+## nvm (~/.nvm/nvm.sh がある場合だけ。bash_completion は compinit を使うので補完ルール節より後に置く)
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+fi
+
+## ~/.local/bin を nvm・fnm の node より前へ置き直す (Codex のインストーラーが追記したブロック。マーカー行は残す)
+# >>> Codex installer >>>
+export PATH="$HOME/.local/bin:$PATH"
+# <<< Codex installer <<<
+# PATH の重複を除く (重複したパスは最初に出てきた位置に残る)
+typeset -U path PATH

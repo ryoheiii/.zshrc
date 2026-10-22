@@ -19,8 +19,7 @@
       "Bash(tail:*)",
       "Bash(wc:*)",
       "Bash(which:*)",
-      "Bash(zsh -n _zshrc-my-custom)",
-      "Bash(zsh -n _zshrc-orig)"
+      "Bash(zsh -n _zshrc)"
     ]
   },
   "attribution": {

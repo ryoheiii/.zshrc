@@ -5,23 +5,21 @@
 
 ## リポジトリと変更範囲
 
-個人用の zsh 設定である。zsh の設定ファイルは 2 つだけで、役割が異なる。
+個人用の zsh 設定である。zsh の設定ファイルは `_zshrc` 1 つである。
 
 | ファイル | 役割 |
 |---|---|
-| `_zshrc-my-custom` | 自分用の設定（WSL2 前提）。`~/.zshrc` はこのファイルへの symlink である |
-| `_zshrc-orig` | 配布用の設定。個人環境固有のパス・エイリアス・ツール前提を持ち込まない |
+| `_zshrc` | 汎用の設定。`~/.zshrc` はこのファイルへの symlink である。環境・ツール固有の設定はガードで囲み、該当しない環境では何もしない |
 
 変更は依頼された目的を達成する範囲に限定し、依頼のないファイルへ変更を便乗させない。
-`_zshrc-my-custom` の変更を `_zshrc-orig` へ自動で反映しない（逆も同じ）。
 
 ## zsh 設定の規約
 
 - 設定は既存のセクション（基本設定、環境変数、プロンプト、シェル変数、関数、alias、
   キーバインド、補完ルール、その他）へ置き、同じ分類の設定を離れた場所へ重複させない。
   「その他」には Mac 向けの追加設定（`case ${OSTYPE}`）、`estart`、WSL 固有の設定
-  （`### WSL` ブロック）がある。OS ごとに分かれる設定は、各節にある既存の `case ${OSTYPE}`
-  分岐へ置く。
+  （`### WSL` ブロック）、nvm の読み込み、Codex installer のブロック、末尾の `typeset -U path PATH`
+  がある。OS ごとに分かれる設定は、各節にある既存の `case ${OSTYPE}` 分岐へ置く。
 - 各設定の直前に日本語コメントで目的を書き、既存のコメント様式に揃える。
 - zsh は非対話シェル（`zsh -c`、スクリプト、ssh のリモートコマンド）では `.zshrc` を読まない。
   ただし Claude Code や Codex のシェルスナップショットのように、非対話シェルから `~/.zshrc` を
@@ -29,20 +27,25 @@
   実行される（`$PROMPT` が空のため return する）。エージェントのシェルにも必要な環境変数と
   PATH はこの行より前に置く。この行より後の alias・関数・setopt は対話シェル専用であり、
   エージェントのシェルでは使えない前提で扱う。
-- WSL 固有の設定（`*.exe` エイリアス、`/mnt/c` の PATH、`DISPLAY` など）は `### WSL` ブロックに
-  置き、`_zshrc-orig` へ持ち込まない。macOS 向けの設定は既存の `case ${OSTYPE}` の
-  `darwin*` 分岐を保つ（`_zshrc-orig` に OS 分岐はない）。
+- WSL 固有の設定（`umask`、`DISPLAY`、`LC_ALL` など）は `### WSL` ブロックの WSL 判定（`if`）の中に
+  置く。macOS 向けの設定は既存の `case ${OSTYPE}` の `darwin*` 分岐を保つ。
+- 環境・ツール固有の設定は、無い環境では何もしない（エラーも出さない）ようガードで囲む。
+  コマンドの有無は環境変数節の先頭にある関数 `__zshrc_has` で調べる（`command -v`・`type` は
+  WSL では無いコマンド 1 つにつき `/mnt/c` 配下の探索に 0.1 秒前後かかり、`$+commands` は PATH を
+  変えるたびにハッシュ表を作り直すので使わない。`__zshrc_has` は `/mnt/<1 文字>/` 配下を探さない）。ファイル・ディレクトリは `[ -f ]`・`[ -d ]`・
+  `[ -s ]` で判定する。ガードは `if …; then … fi` で書き、`cond && cmd` は使わない（最終行に
+  来ると source の終了状態が 1 になる）。ファイルの最終行は `typeset -U path PATH` のままにする。
 - パスは `$HOME` で書き、ユーザー名を含む絶対パスを残さない。
   トークン・鍵・資格情報を設定へ書かない。
 - 既存の alias・関数・キーバインドを削除・改名するときは、それに依存する定義
   （例: `erestart` は `ekill` と `estart` に依存する）も確認する。
-- 以上の規約はエージェントが追加・変更する行に適用する。既存の不一致（return 行より後の
-  WSL 用 export・PATH、重複する setopt、`# >>> Codex installer >>>` のようにインストーラーが
-  管理するブロック内の絶対パス）とユーザーの未コミット変更は、依頼がない限り
-  移動・統合・書き換えしない。
-- `_zshrc-my-custom`・`_zshrc-orig` の変更で README.md の記述（alias・関数・キーバインドの表、
+- 以上の規約はエージェントが追加・変更する行に適用する。既存の不一致（return 行より後にある
+  WSL 用 export・Mac の PATH と `HOMEBREW_CASK_OPTS`・nvm・`# >>> Codex installer >>>` ブロックの
+  PATH、`cond && cmd` 形の既存行〔hosts の収集、nvm の読み込み〕、Mac の `fpath` 追加が `compinit`
+  より後にあること、など）とユーザーの未コミット変更は、依頼がない限り移動・統合・書き換えしない。
+- `_zshrc` の変更で README.md の記述（alias・関数・キーバインドの表、
   前提ツール、導入手順、PATH の並び、既知の注意点など）が実態と合わなくなる場合は、同じ作業で
-  README.md の該当箇所だけを更新する。これは便乗変更に当たらない。`custom:NN` などの行番号の
+  README.md の該当箇所だけを更新する。これは便乗変更に当たらない。`_zshrc:NN` などの行番号の
   追従は不要で、該当箇所以外の README の整形・書き換えはしない。
 
 ## 安全と作業の継続
@@ -72,17 +75,16 @@
 
 ## 検証と完了条件
 
-`_zshrc-my-custom` または `_zshrc-orig` を変更した場合は、リポジトリルートで次を実行し、
-`rc=0` かつ stderr に出力がないことを確認する
-（`_zshrc-orig` では構文検査の引数と `f` のファイル名を差し替える）。
+`_zshrc` を変更した場合は、リポジトリルートで次を実行し、
+`rc=0` かつ stderr に出力がないことを確認する。
 
 ```sh
 # 構文検査
-zsh -n _zshrc-my-custom
+zsh -n _zshrc
 
 # 対話シェルとしての起動検査。~/.zshrc を差し替えずに作業中のファイルを読み込み、
 # return 行より後の alias (zns) が定義されたことで、return 行を越えて読まれたと判定する
-f="$(git rev-parse --show-toplevel)/_zshrc-my-custom"
+f="$(git rev-parse --show-toplevel)/_zshrc"
 d=$(mktemp -d) && ln -s "$f" "$d/.zshrc" && test -r "$d/.zshrc" && ZDOTDIR="$d" zsh -i -c 'alias zns >/dev/null'; echo "rc=$?"; rm -f "$d/.zshrc" "$d/.zcompdump"; rmdir "$d"
 ```
 
@@ -96,7 +98,7 @@ zsh の検査は要求しない。`.claude/settings.json` と `.codex/config.tom
 JSON と TOML として読み込めることも確認する
 （`jq . .claude/settings.json`、`python3 -c 'import tomllib; tomllib.load(open(".codex/config.toml", "rb"))'`）。
 
-`~/.zshrc` は作業中の `_zshrc-my-custom` への symlink なので、保存した変更は新しく起動する
+`~/.zshrc` は作業中の `_zshrc` への symlink なので、保存した変更は新しく起動する
 シェルへ即座に反映される（`~/.zshrc.zwc` は元ファイルより古ければ無視される）。
 壊れた状態のまま保存して放置しない。現在のシェルへの再読み込み（`zns`）はユーザーが行う。
 
