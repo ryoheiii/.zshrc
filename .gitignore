@@ -1,0 +1,12 @@
+# zsh の生成物（リポジトリ内で zcompile / compinit を実行した場合の保険）
+*.zwc
+.zcompdump*
+
+# 文書の生成物（mdh で変換した HTML）
+/README.html
+
+# Claude Code のローカル設定と作業領域
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/hookify.*.local.md
+.claude/worktrees/
