@@ -9,7 +9,7 @@
 # Esc-h  man呼び出し
 # Esc-q  現在入力中の文字列を退避
 # C-a    先頭に移動
-# C-a    末尾に移動
+# C-e    末尾に移動
 # C-k    カーソルから末尾まで削除
 # C-w    単語単位で削除
 # Esc-?  コマンドのパスを表示
@@ -30,7 +30,7 @@ HISTSIZE=10000
 SAVEHIST=10000
 # 重複するコマンド行は古い方を削除
 setopt hist_ignore_all_dups
-#直前と同じコマンドをヒストリに追加しない
+#直前と同じコマンドをヒストリに追加しない (↑↓ では今の行と同じ履歴を飛ばす)
 setopt hist_ignore_dups
 #スペースで始まる場合はヒストリに追加しない
 setopt hist_ignore_space
@@ -40,7 +40,7 @@ setopt inc_append_history
 setopt share_history
 #移動履歴をプッシュ(cd -[Tab]
 setopt auto_pushd
-#移動履歴をキューではなくスタックで番号付け(最近居た場所が上になる)
+#cd -N と cd +N の + と - の意味を入れ替える (cd -1 が直前にいたディレクトリになる)
 setopt pushd_minus
 #移動履歴の重複禁止
 setopt PUSHD_IGNORE_DUPS
@@ -56,10 +56,6 @@ setopt INTERACTIVE_COMMENTS
 if [ -f "/etc/zsh_command_not_found" ]; then
     source /etc/zsh_command_not_found
 fi
-#Ctrl-dでログアウトしない
-#setopt ignore_eof
-#zsh組み込みの関数を利用することでARG_MAXを回避する
-#zmodload zsh/files
 
 
 ################
@@ -111,14 +107,8 @@ fi
 #################
 
 #黒赤緑黄青紫水白
-#local BLACK=$'%{\e[1;30m%}'
-#local RED=$'%{\e[1;31m%}'
 local GREEN=$'%{\e[1;32m%}'
-#local YELLOW=$'%{\e[1;33m%}'
 local BLUE=$'%{\e[1;34m%}'
-#local PURPLE=$'%{\e[1;35m%}'
-#local LIGHTBLUE=$'%{\e[1;36m%}'
-#local WHITE=$'%{\e[1;37m%}'
 local DEFAULT=$'%{\e[1;m%}'
     #%n     ユーザー名
     #%M     コンピュータ名
@@ -132,8 +122,6 @@ SPROMPT="%r is correct? [n,y,a,e]: "
 #右プロンプト
     #%*     時間
 RPROMPT=$DEFAULT"["$GREEN"%*"$DEFAULT"]"
-#複数行右プロンプト
-#RPROMPT2
 #タイトル
 case "${TERM}" in
 kterm*|xterm*)
@@ -227,7 +215,6 @@ if __zshrc_has emacs; then
     alias erestart="ekill && estart"
     alias ecli="emacsclient -nw -a ''"
     alias e="emacs -nw"
-    # alias emacs="emacs -nw"
 fi
 
 ## nkf (nkf がある場合だけ)
@@ -300,7 +287,6 @@ esac
 alias la="ls -a"                #隠しファイルも
 alias ll="ls -lh"               #詳細付き, ファイルサイズに接頭語
 alias lla="ls -lha"             #全部詳細
-#alias lls='ls -l --sort=extension --color=tty'
 
 #mv
 alias mv='mv -i'
@@ -310,8 +296,6 @@ alias cp="cp -i"    #上書きを確認
 if __zshrc_has trash-put; then
     alias rm="trash-put"
 fi
-
-#alias rm='rm -i'
 alias rm='rm -v'
 alias rmtmp='rm -v *~ #*#'
 
@@ -329,11 +313,8 @@ if __zshrc_has emacs; then
     alias -s xml=emacs
 fi
 if __zshrc_has firefox; then
-    #alias -s html=google-chrome
     alias -s html=firefox
-    #alias -s pdf=google-chrome
     alias -s pdf=firefox
-    #alias -s xhtml=google-chrome
     alias -s xhtml=firefox
 fi
 if __zshrc_has zipinfo; then
@@ -389,7 +370,7 @@ bindkey '^[[1;3A' cdup
 #M-←でpopd
 zle -N cdback
 bindkey '^[[1;3D' cdback
-#M-@
+#M-` と M-' で入力中の行全体を `…` / '…' で囲む
 bindkey -s '^[`' '`^A `^A'
 bindkey -s "^['" "'^A '^A"
 
@@ -410,7 +391,7 @@ zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-
 zstyle ':completion:*:*:*:*:processes' command "ps -u `whoami` -o pid,user,comm -w -w"
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*:cd:*' tag-order local-directories directory-stack path-directories
-#use /etc/hosts and known_hosts for hostname completion
+#ホスト名補完の候補 (known_hosts、/etc/hosts、自ホスト名、localhost)
 [ -r ~/.ssh/known_hosts ] && _ssh_hosts=(${${${${(f)"$(<$HOME/.ssh/known_hosts)"}:#[\|]*}%%\ *}%%,*}) || _ssh_hosts=()
 [ -r /etc/hosts ] && : ${(A)_etc_hosts:=${(s: :)${(ps:\t:)${${(f)~~"$(</etc/hosts)"}%%\#*}##[:blank:]#[^[:blank:]]#}}} || _etc_hosts=()
 hosts=(
@@ -425,27 +406,23 @@ zstyle ':completion:*:hosts' hosts $hosts
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
 #矢印キー補完選択
 zstyle ':completion:*:default' menu select
-#先方予測・学習機能
-#autoload predict-on
-#predict-on
 #自動cd(cdなしでおｋ
 setopt auto_cd
-#コマンド修正提示
-#setopt correct         #通常
-setopt correct_all  #ファイル名まで考慮
+#コマンド修正提示 (ファイル名まで考慮)
+setopt correct_all
 #補完候補が複数ある時に、一覧表示する
 setopt auto_list
 #タブキー連打で補完候補を順に表示
 setopt auto_menu
-# 補完候補が複数ある時、一覧表示 (auto_list) せず、すぐに最初の候補を補完する
+#補完候補が複数ある時、すぐに最初の候補を補完する (menu select により候補の選択メニューも出る)
 setopt menu_complete
 #補完候補一覧でファイルの種別を識別マーク表示(ls -F の記号)
 setopt list_types
 #'='以降でも補完できるようにする( --prefix=/usr 等の場合)
 setopt magic_equal_subst
-#補完される前にオリジナルのコマンドまで展開してチェックする
+#alias を展開せず、別のコマンドとして補完する (rm・ls など同名 alias のオプション補完をそのまま保つ)
 setopt complete_aliases
-#カッコの対応などを自動的に補完
+#パラメータ名の補完で自動的に入った空白などを、次に } などを打ったときに消す
 setopt auto_param_keys
 #末尾の/を消去しない
 setopt noautoremoveslash
