@@ -79,11 +79,6 @@ function __zshrc_has() {
 ## 日本語utf-8
 export LANG=ja_JP.UTF-8
 
-## ライブラリパス (~/local/lib がある場合だけ。元の値が空のとき末尾に : を付けない)
-if [ -d "$HOME/local/lib" ]; then
-    export LD_LIBRARY_PATH="$HOME/local/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-fi
-
 ### .local 関連
 ## 実行バイナリパス
 export PATH="$HOME/.local/bin:$PATH"
@@ -143,8 +138,6 @@ esac
 #補完候補にもlsと同じ色付き表示
 
 case ${OSTYPE} in
-  darwin*) # ここに Mac 向けの設定
-    ;;
   linux*)  # ここに Linux 向けの設定
     # dircolors がある場合だけ (-b: SHELL の値に関係なく sh 形式で出力させる)
     if __zshrc_has dircolors; then
@@ -159,10 +152,6 @@ esac
 ### シェル変数 ###
 ##################
 
-#補完関数用フォルダ
-if [ -d "$HOME/.compfunc" ]; then
-    fpath=(${HOME}/.compfunc ${fpath})
-fi
 #「/」も単語区切りとみなす。
 WORDCHARS=${WORDCHARS:s,/,,}
 
@@ -241,11 +230,6 @@ if __zshrc_has nkf; then
     alias nkfsjis="nkf -s --overwrite "
 fi
 
-## cp関連 (テンプレートの Makefile がある場合だけ)
-if [ -f "$HOME/Dropbox/data/template/make/C_and_C++/Makefile" ]; then
-    alias cpmake="cp ~/Dropbox/data/template/make/C_and_C++/Makefile ."
-fi
-
 ## g++関連 (g++ がある場合だけ)
 if __zshrc_has g++; then
     alias g="g++"
@@ -294,8 +278,6 @@ alias -g X='| xargs'
 
 #ls
 case ${OSTYPE} in
-  darwin*) # ここに Mac 向けの設定
-    ;;
   linux*)  # ここに Linux 向けの設定
     alias ls="ls -FX --color=auto"  #ディレクトリには/, 色つき
   ;;
@@ -460,22 +442,6 @@ unsetopt promptcr
 ## その他 ##
 ############
 
-## for Mac
-## zsh
-case ${OSTYPE} in
-    darwin*) # ここに Mac 向けの設定
-        # GUI の Emacs.app がある場合だけ、e で Emacs.app を開く (無ければ alias 節の emacs -nw のまま。emacs コマンドも無ければ e は定義されない)
-        if [ -d /Applications/Emacs.app ] || [ -d "$HOME/Applications/Emacs.app" ]; then
-            alias e="open -a emacs"
-        fi
-        fpath=(/usr/local/share/zsh-completions $fpath)
-        export PATH="/usr/local/bin:$PATH"
-        export HOMEBREW_CASK_OPTS="--appdir=/Applications"
-        ;;
-    linux*)  # ここに Linux 向けの設定
-        ;;
-esac
-
 ## emacs (emacs がある場合だけ。alias 節の erestart が使う)
 if __zshrc_has emacs; then
     function estart() {
@@ -495,12 +461,7 @@ fi
 if [[ -n $WSL_DISTRO_NAME || ( -r /proc/sys/kernel/osrelease && "$(</proc/sys/kernel/osrelease)" == *[Mm]icrosoft* ) ]]; then
     umask 022
 
-    ## X Window Server: https://ja.osdn.net/projects/sfnet_xming/
-    # for WSL1
-    # export DISPLAY=localhost:0.0
-
-    # for WSL2 (by windwos's ipconfig)
-    # export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+    ## X サーバーの表示先 (WSLg)
     export DISPLAY=:0
 
     export LC_ALL=ja_JP.UTF-8
@@ -517,9 +478,5 @@ if [ -s "$HOME/.nvm/nvm.sh" ]; then
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 fi
 
-## ~/.local/bin を nvm・fnm の node より前へ置き直す (Codex のインストーラーが追記したブロック。マーカー行は残す)
-# >>> Codex installer >>>
-export PATH="$HOME/.local/bin:$PATH"
-# <<< Codex installer <<<
 # PATH の重複を除く (重複したパスは最初に出てきた位置に残る)
 typeset -U path PATH

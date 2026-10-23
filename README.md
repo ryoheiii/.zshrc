@@ -7,7 +7,7 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 - 動作確認環境: WSL2 (Ubuntu) 上の zsh 5.9 (`x86_64-ubuntu-linux-gnu`)。`~/.zshrc -> ~/.config/zsh/_zshrc`
 - clone 先: `~/.config/zsh` (リポジトリ名は `.zshrc`)
 - 前提: 日本語ロケール (`ja_JP.UTF-8`) と zsh の emacs キーマップ。rc に `bindkey -e` は無く、キーマップは zsh 起動時の `EDITOR` / `VISUAL` で決まる ([注意点](#動作に影響するもの))
-- Mac 向けの分岐 (`case ${OSTYPE}` の `darwin*`) も一部ある
+- OS の分岐は `case ${OSTYPE}` の `linux*` だけ (`ls` の alias と `LS_COLORS`)。Mac 向けの設定 (`darwin*` 分岐) は 2026-10 に削除した
 
 > 行番号 (例: `_zshrc:92`) は 2026-10 時点の `_zshrc` での位置。編集するとずれるので目安として使う。
 
@@ -15,7 +15,7 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 
 | ファイル | 役割 |
 |---|---|
-| `_zshrc` | 設定本体 (525 行)。`~/.zshrc` からリンクして使う。環境やツールに依存する設定はガードで囲み、該当しない環境では何もしない |
+| `_zshrc` | 設定本体 (482 行)。`~/.zshrc` からリンクして使う。環境やツールに依存する設定はガードで囲み、該当しない環境では何もしない |
 | `README.md` | このファイル |
 | `AGENTS.md` / `CLAUDE.md` / `.claude/` / `.codex/` | AI エージェント向けの変更規約と設定 ([エージェント向け](#エージェント向け)) |
 | `.gitignore` | `*.zwc`、`.zcompdump*`、`/README.html` (mdh で README を変換した HTML)、Claude Code のローカル設定 (`CLAUDE.local.md`、`.claude/settings.local.json`、`.claude/hookify.*.local.md`、`.claude/worktrees/`) を除外 |
@@ -31,7 +31,6 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 |---|---|
 | 常に | 履歴・ディレクトリスタック・補完の setopt と `INTERACTIVE_COMMENTS`、`LANG`、`~/.local/bin` と `~/.local/share/fnm` の `PATH`、`TERM`、プロンプトと端末タイトルの `precmd`、`WORDCHARS`、関数 `up` `cdup` `cdback`、`zns`、git の alias、`la` `ll` `lla`、`mv -i` `cp -i`、`rm -v` `ln -i -v`、`rmtmp`、`poweroff` `reboot`、グローバル alias (`G` `L` `H` `T` `S` `W` `X` `sl` `LS`)、打ち間違い対策 (`s` `l` `ks` `lsa` `cd..`)、キーバインド、補完ルール、`typeset -U path PATH` |
 | Linux (`linux*`) | `ls -FX --color=auto`。さらに `dircolors` があれば `LS_COLORS` と補完候補の色付け |
-| macOS (`darwin*`) | `fpath` に `/usr/local/share/zsh-completions`、`PATH` に `/usr/local/bin`、`HOMEBREW_CASK_OPTS`。`/Applications/Emacs.app` (か `~/Applications/Emacs.app`) があれば `e` を `open -a emacs` に |
 | WSL | `umask 022`、`DISPLAY=:0`、`LC_ALL=ja_JP.UTF-8`。`~/.Xauthority` があれば `XAUTHORITY` も |
 | fnm | `eval "$(fnm env --shell zsh)"` |
 | emacsclient | `EDITOR="emacsclient -nw -a ''"` |
@@ -40,10 +39,7 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 | nautilus / zipinfo / xsel / firefox (Linux 版) | 関数 `naop` / `.zip` の拡張子 alias / `toclip` 系のグローバル alias / `.html` `.pdf` `.xhtml` の拡張子 alias |
 | trash-put | `rm` を `trash-put` に (ただし直後の `rm -v` で上書きされるので効かない。[注意点](#動作に影響するもの)) |
 | gnome-open があり、`go` コマンドが無い | `go` → `gnome-open` |
-| `~/Dropbox/data/template/make/C_and_C++/Makefile` | `cpmake` |
 | `~/.nvm/nvm.sh` | nvm と nvm の bash_completion の読み込み |
-| `~/local/lib` | `LD_LIBRARY_PATH` の先頭に追加 |
-| `~/.compfunc` | `fpath` の先頭に追加 |
 | `/etc/zsh_command_not_found` | command-not-found の読み込み |
 | `~/.ssh/known_hosts` / `/etc/hosts` | ホスト名補完の候補に読み込む |
 
@@ -55,8 +51,8 @@ perl (`up`)、git、sudo (`poweroff` `reboot`)、coreutils (`basename`、`whoami
 
 非端末ガード `[ $#PROMPT -eq 0 -o $#TERM -eq 0 ] && return` (_zshrc:105) は、`PROMPT` か `TERM` が空ならその行で読み込みを打ち切る。対話シェルでは `PROMPT` に初期値がある (`zsh -fic 'echo $#PROMPT'` は 5、非対話の `zsh -fc` では 0) ので、実際に効くのは非対話の zsh から `~/.zshrc` を `source` したときなど。これに当たる主な例は、Claude Code や Codex がシェルスナップショットを作るために非対話シェルから `~/.zshrc` を source する場合 ([AGENTS.md](AGENTS.md))。このときガードより後の alias・関数・setopt・nvm・WSL 節は読まれない。
 
-- ガードより前 (非対話でも適用される): 履歴とディレクトリスタックの setopt、`INTERACTIVE_COMMENTS`、command-not-found の読み込み、関数 `__zshrc_has`、`LANG`、`LD_LIBRARY_PATH` (`~/local/lib` がある場合)、`PATH` と fnm (fnm がある場合)、`TERM`、`EDITOR` (emacsclient がある場合)
-- ガードより後 (非対話では適用されない): プロンプト以降の全部。WSL 節 (`umask`、`DISPLAY`、`LC_ALL`、`XAUTHORITY`)、nvm、Codex installer の `PATH`、`typeset -U path PATH` もこちらに入る
+- ガードより前 (非対話でも適用される): 履歴とディレクトリスタックの setopt、`INTERACTIVE_COMMENTS`、command-not-found の読み込み、関数 `__zshrc_has`、`LANG`、`PATH` と fnm (fnm がある場合)、`TERM`、`EDITOR` (emacsclient がある場合)
+- ガードより後 (非対話では適用されない): プロンプト以降の全部。WSL 節 (`umask`、`DISPLAY`、`LC_ALL`、`XAUTHORITY`)、nvm、`typeset -U path PATH` もこちらに入る
 
 環境変数と PATH はガードより前、対話専用の設定は後に置く。
 
@@ -86,17 +82,13 @@ perl (`up`)、git、sudo (`poweroff` `reboot`)、coreutils (`basename`、`whoami
 | nkf | `nkfutf8` `nkfsjis` |
 | g++、online-judge-tools (`oj`) | `g` `a` `g++11` `gna` (g++)。`gojt` は oj もある場合だけ |
 | GNU GLOBAL (`gtags`) と Exuberant Ctags (`/usr/bin/ctags-exuberant`。gtags.conf の `exuberant-ctags` ラベルがこのパスを直接呼ぶ) | `gtags-table` `gtags-clear` `rmgtags`。`gtags-table` はこの機では使えない (下記) |
-| `~/Dropbox/data/template/make/C_and_C++/Makefile` | `cpmake`。ファイルがある場合だけ定義し、この機ではパスの大文字小文字が合わず定義されない (下記) |
 | fnm | 起動時の `PATH` (`~/.local/share/fnm`、`~/.local/bin` など) にあれば `eval "$(fnm env --shell zsh)"` を実行する ([Node.js](#nodejs)) |
 | nvm | `~/.nvm/nvm.sh` があれば末尾で読み込む |
 | trash-put | あれば `rm` を `trash-put` にするが、直後の `rm -v` で上書きされる ([注意点](#動作に影響するもの)) |
-| `~/local/lib` | あれば `LD_LIBRARY_PATH` の先頭に足す (`~/.local` ではなく `~/local`) |
 | command-not-found (Ubuntu) | `/etc/zsh_command_not_found` があれば読み込み、未インストールのコマンドにパッケージ候補を出す |
-| `~/.compfunc` | 自作の補完関数置き場。あれば `fpath` の先頭に追加する |
 
 2026-10 時点の WSL2 機には xsel・trash-put・nautilus・oj・gnome-open・Linux 版 firefox が無い (`command -v` で確認)。そのため toclip 系、`naop`、`gojt`、`go`、`.html` `.pdf` `.xhtml` の拡張子 alias (Linux 版の `firefox` を呼ぶ) は定義されない。trash-put は無くても影響しない ([注意点](#動作に影響するもの)の `rm` の項)。
 
-- `~/Dropbox` も無い (あるのは小文字の `~/dropbox -> /mnt/d/Dropbox`) ので、`cpmake` も定義されない。
 - `/usr/bin/ctags-exuberant` も無い (入っているのは universal-ctags だけ) ので、`gtags-table` は `gtags: cannot execute '/usr/bin/ctags-exuberant'` で失敗し、中途半端な `GPATH` `GRTAGS` `GTAGS` が残る。この機では `gtags --gtagslabel=universal-ctags` なら動く。
 
 ## 導入手順
@@ -282,13 +274,12 @@ user@hostname:dir$                                          [9:05:42]
 
 | alias | 条件 | 展開 |
 |---|---|---|
-| `e` / `ecli` | emacs | `emacs -nw` (Mac で Emacs.app があれば、emacs コマンドの有無にかかわらず `open -a emacs`) / `emacsclient -nw -a ''` (サーバーが無ければデーモンを起動して開く) |
+| `e` / `ecli` | emacs | `emacs -nw` / `emacsclient -nw -a ''` (サーバーが無ければデーモンを起動して開く) |
 | `ekill` / `erestart` | emacs | Emacs デーモンを終了 / 終了してから `estart` |
 | `em` / `emasc` | emacs | 打ち間違い対策 (`emacs`) |
 | `nkfutf8` / `nkfsjis` | nkf | `nkf -w --overwrite ` / `nkf -s --overwrite ` (ファイルを UTF-8 / Shift_JIS で上書き) |
 | `g` / `a` / `g++11` | g++ | `g++` / `./a.out` / `g++ -std=c++11` |
 | `gna` / `gojt` | g++ (`gojt` は oj も) | `g++ main.cpp && ./a.out` / `g++ main.cpp && oj t` (競プロ用) |
-| `cpmake` | `~/Dropbox/data/template/make/C_and_C++/Makefile` がある | そのファイルをカレントにコピー |
 | `gtags-table` / `gtags-clear` (`rmgtags`) | gtags | `gtags --gtagslabel=exuberant-ctags` / `rm -v GPATH GRTAGS GTAGS` |
 | `aptupd` `aptupg` `aptrem` `aptcle` `aptins` | apt | `sudo apt` の `update` `upgrade` `autoremove` `autoclean` `install` |
 | `go` | gnome-open があり、`go` コマンドが無い | `gnome-open` |
@@ -297,23 +288,15 @@ user@hostname:dir$                                          [9:05:42]
 
 ### Linux
 
-- `dircolors` があれば `LS_COLORS` を設定し、補完候補も色付けする。これと `ls` の alias は `linux*` 分岐に入れている。
+- `dircolors` があれば `LS_COLORS` を設定し、補完候補も色付けする。これと `ls` の alias は `linux*` 分岐に入れている。ほかの OS では素の `ls` のままで、補完候補全般の色付けも無い (kill の候補の色付けは OS 分岐の外にあるので効く)。
 - Ubuntu では `/etc/zsh_command_not_found` が読まれる。また `/etc/zsh/zshrc` が `~/.zshrc` より先に読まれ、zle の読み込み・Home / End などの割り当て・`compinit` を行う ([注意点](#動作に影響するもの))。
-
-### macOS
-
-- その他節の `darwin*` 分岐 (_zshrc:465-477) では、`/Applications/Emacs.app` (か `~/Applications/Emacs.app`) があれば `e` を `open -a emacs` (GUI の Emacs.app) にし、`fpath` に `/usr/local/share/zsh-completions`、`PATH` の先頭に `/usr/local/bin` を足し、`HOMEBREW_CASK_OPTS="--appdir=/Applications"` を設定する。
-- Mac では `ls` の alias と、補完候補全般の色付け (`LS_COLORS`) が定義されない。そのため `ls` `la` `ll` などは素の BSD `ls` になる。kill の候補の色付け (_zshrc:412) は OS 分岐の外にあるので Mac でも効く。
-- Homebrew は Intel 版の `/usr/local` だけを想定している (Apple Silicon の `/opt/homebrew` は扱っていない)。
-- fnm・nvm・WSL 節はガードで判定するので、無い環境では何もしない。
-- コマンドの有無は起動時の `PATH` で判定する。`darwin*` 分岐の `/usr/local/bin` の追加はガードより後 (その他節) にあるので、起動時の `PATH` に `/usr/local/bin` が無いと (launchd 経由の GUI アプリから起動した非ログインシェルなど)、Homebrew にだけあるツールの alias や `EDITOR` は定義されない。macOS の既定の `PATH` (`/etc/paths`) には含まれるので、通常は影響しない。
 
 ### WSL
 
 その他節の `### WSL` ブロック (_zshrc:493-511) は、`WSL_DISTRO_NAME` があるか、`/proc/sys/kernel/osrelease` に `microsoft` を含むときだけ次を設定する (後者は ssh や `sudo -i`、`env -i` で環境変数が無い場合のため。fork はしない)。
 
 - `umask 022`
-- `DISPLAY=:0` (_zshrc:504)、`~/.Xauthority` があれば `XAUTHORITY`。`:0` は WSLg を前提にした値 (この機には `/mnt/wslg` がある)。コメント (_zshrc:498) に Xming の URL があり、WSL1 用の `localhost:0.0` (_zshrc:500) と、WSL2 で `/etc/resolv.conf` から組み立てる方式 (_zshrc:503) が、どちらもコメントアウトで残っている
+- `DISPLAY=:0` (_zshrc:504)、`~/.Xauthority` があれば `XAUTHORITY`。`:0` は WSLg を前提にした値 (この機には `/mnt/wslg` がある)
 - `LC_ALL` を `ja_JP.UTF-8` (`LANG` は環境変数節で常に設定する)
 
 WSL のカーネルで動く Docker コンテナなどでも、`osrelease` が同じなので判定が真になる (影響は `umask`、`DISPLAY`、`LC_ALL`)。Windows 側のアプリ (Office、Acrobat、Firefox) の `PATH` と alias は 2026-10 の統合時に削除した。
@@ -330,11 +313,13 @@ WSL のカーネルで動く Docker コンテナなどでも、`osrelease` が�
 env -i HOME="$HOME" TERM=xterm SHELL="$(command -v zsh)" zsh -i -c 'print -l $path; whence -a node'
 ```
 
-1. `~/.local/bin` (Codex installer のブロック (_zshrc:522) が最後に先頭へ足し、`typeset -U` で _zshrc:89 の分がまとめられる)
-2. nvm の node (`~/.nvm/versions/node/<版>/bin`)
-3. fnm の multishell (`fnm env` が作る一時ディレクトリ)
-4. `~/.local/share/fnm`
+1. nvm の node (`~/.nvm/versions/node/<版>/bin`)
+2. fnm の multishell (`fnm env` が作る一時ディレクトリ)
+3. `~/.local/share/fnm`
+4. `~/.local/bin`
 5. 元の `PATH`
+
+`~/.local/bin` は node のパスより後ろになる (nvm の後で `~/.local/bin` を先頭へ戻していた Codex installer のブロックは 2026-10 に削除した)。2026-10 時点では `~/.local/bin` と node の `bin` に同名のコマンドは無い。
 
 この場合は nvm の `node` が先に見つかる。ただし入れ子のシェル (zsh の中で zsh を起動した場合など) では、`nvm.sh` が `PATH` に既にある nvm のパスをその場で置き換えるので、引き継いだ順序が残り、fnm の `node` が先頭になる (`whence -a node` で確認)。
 
@@ -367,12 +352,10 @@ env -i HOME="$HOME" TERM=xterm SHELL="$(command -v zsh)" zsh -i -c 'print -l $pa
 - **Home / End は `^[OH` / `^[OF` だけ** (_zshrc:380-381): アプリケーションモードのシーケンスしか bindkey していない。Ubuntu では `/etc/zsh/zshrc` が `zle-line-init` で端末をアプリケーションモードにし、terminfo で同じ割り当てもするので動く。それが無い環境では、通常モードの `^[[H` / `^[[F` は未定義のまま (この機でも `bindkey '^[[H'` は `undefined-key`)。
 - **Alt+矢印は端末依存**: 端末が `^[[1;3A` などの xterm 形式のシーケンスを送る前提。Windows Terminal や VS Code のターミナルなど、端末側が Alt+矢印 を自分のショートカットに使っていると届かない。
 - **ssh のホストが補完に出ないことがある** (_zshrc:417): `known_hosts` がハッシュ化 (`HashKnownHosts`) されていると、そのホストは候補にならない。この機では `known_hosts` が全行ハッシュ化されているので、候補は `/etc/hosts`・`$HOST`・`localhost` 由来だけになる。候補は起動時に一度だけ作る。
-- **Codex installer のブロック** (_zshrc:521-523): Codex のインストーラーが追記した `# >>> Codex installer >>>` のブロック。統合時に、インストーラーが書いたユーザー名入りの絶対パスを `$HOME` に書き換え、マーカー行は残した。nvm の後で `~/.local/bin` を `PATH` の先頭に戻す働きがあり (_zshrc:89 と同じ追加で、_zshrc:525 の `typeset -U` で 1 つにまとまる)、削除すると `~/.local/bin` が nvm・fnm の node より後ろに下がる。インストーラーを再実行したときに追記し直されるかは未確認。
-- **Mac の zsh-completions が効かない**: `fpath` への追加 (_zshrc:471) が `compinit` (_zshrc:406) より後にあるので、そのシェルの補完には効かない。
+- **Codex installer のブロックは削除済み**: Codex のインストーラーが追記していた `# >>> Codex installer >>>` のブロック (nvm の後で `~/.local/bin` を `PATH` の先頭へ戻す) は 2026-10 に削除した ([Node.js](#nodejs))。インストーラーを再実行すると、ユーザー名入りの絶対パスで追記し直される可能性がある (未確認)。追記されたら削除するか、残すなら `$HOME` 表記に直す。
 
 ### 重複している・効いていない定義
 
-- `~/.local/bin` の `PATH` 追加が、環境変数節 (_zshrc:89) と Codex installer のブロック (_zshrc:522) の 2 回ある (結果は同じ。[注意点](#動作に影響するもの)の Codex の項)。
 - `gtags-clear` と `rmgtags` (_zshrc:267-268) は同じコマンド。
 - `hist_ignore_dups` は `hist_ignore_all_dups` に含まれる。`share_history` は `inc_append_history` の動作も含む (man では併用しないよう勧めている)。`hist_expire_dups_first` は、`hist_ignore_all_dups` で重複が残らず `HISTSIZE` と `SAVEHIST` も同じ値なので、ほぼ効かない。
 - `menu_complete` が `auto_menu` より優先される。`auto_list`・`auto_menu`・`list_types`・`auto_param_keys` は zsh の既定で on なので、setopt しなくても同じ。
@@ -387,7 +370,6 @@ env -i HOME="$HOME" TERM=xterm SHELL="$(command -v zsh)" zsh -i -c 'print -l $pa
 - _zshrc:443 の「一覧表示 (auto_list) せず、すぐに最初の候補を補完する」: _zshrc:430 の `menu select` があるので、実際には候補の選択メニューも出る。
 - _zshrc:449 の「補完される前にオリジナルのコマンドまで展開してチェックする」: `complete_aliases` の実際の意味はこの逆で、alias を展開せずに補完する。
 - _zshrc:451 の「カッコの対応などを自動的に補完」: `auto_param_keys` は、パラメータ名の補完で自動的に入った空白などを、次に `}` などを打ったときに消す機能。
-- _zshrc:498 の Xming の URL は、今の `DISPLAY=:0` (WSLg) とは関係が無い (古い設定の名残)。
 
 ## エージェント向け
 
