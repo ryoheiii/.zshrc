@@ -25,12 +25,12 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 
 旧 `_zshrc-orig` (配布用) と `_zshrc-my-custom` (自分用) を 2026-10 に 1 ファイルへ統合した。環境・ツールに依存する設定は起動時に判定し、該当しなければ定義も export もしない (エラーも出ない)。
 
-- コマンドの有無は関数 `__zshrc_has` (_zshrc:27) で調べる。`PATH` 上の実行ファイルだけを見て alias・関数は数えず、WSL の Windows 側のディレクトリ (`/mnt/c` など `/mnt/<1 文字>/` 配下) は探さない (探すと無いコマンド 1 つにつき 0.1 秒前後かかるため)。判定は起動時の 1 回だけなので、ツールを入れたり消したりしたら新しいシェルか `zns` で反映する。
-- ファイル・ディレクトリは `[ -f ]` / `[ -d ]` / `[ -s ]`、OS は `case ${OSTYPE}`、WSL は `WSL_DISTRO_NAME` か `/proc/sys/kernel/osrelease` で判定する ([WSL](#wsl))。
+- コマンドの有無は関数 `__zshrc_has` (_zshrc:27) で調べる。`PATH` 上の実行ファイルだけを見て alias・関数は数えず、WSL の Windows 側のディレクトリ (`/mnt/c` など `/mnt/<1 文字>/` 配下) は探さない (探すと無いコマンド 1 つにつき 0.1 秒前後かかるため)。判定は起動時の 1 回だけなので、ツールを入れたら新しいシェルか `zns`、消したら新しいシェルで反映する。
+- ファイル・ディレクトリは `[ -f ]` / `[ -d ]` / `[ -r ]`、OS は `case ${OSTYPE}`、WSL は `WSL_DISTRO_NAME` か `/proc/sys/kernel/osrelease` で判定する ([WSL](#wsl))。
 
 | 条件 | 有効になる設定 |
 |---|---|
-| 常に | 履歴・ディレクトリスタック・補完の setopt と `interactive_comments`、`typeset -gU path PATH`、`LANG`、`~/.local/bin` の `PATH`、`TERM` (`xterm` のときだけ `xterm-256color` に上げる)、プロンプト、`WORDCHARS`、関数 `up` `cdup` `cdback`、`zns`、git の alias とその補完の割り当て (`compdef`)、`la` `ll` `lla`、`mv -i` `cp -i`、`rm -v` `ln -i -v`、`rmtmp`、`poweroff` `reboot`、グローバル alias (`G` `L` `H` `T` `S` `W` `X`)、打ち間違い対策 (`s` `l` `ks` `sl` `LS` `lsa` `cd..`)、キーバインド、補完ルール |
+| 常に | 履歴・ディレクトリスタック・補完の setopt と `auto_cd`・`correct_all`・`interactive_comments`、`typeset -gU path PATH`、`LANG`、`~/.local/bin` の `PATH`、`TERM` (`xterm` のときだけ `xterm-256color` に上げる)、プロンプト、`WORDCHARS`、関数 `up` `cdup` `cdback`、`zns`、git の alias とその補完の割り当て (`compdef`)、`la` `ll` `lla`、`mv -i` `cp -i`、`rm -v` `ln -i -v`、`rmtmp`、`poweroff` `reboot`、グローバル alias (`G` `L` `H` `T` `S` `W` `X`)、打ち間違い対策 (`s` `l` `ks` `sl` `LS` `lsa` `cd..`)、キーバインド、補完ルール |
 | `TERM` が `dumb`・`linux`・`eterm*`・空のどれでもない | 端末タイトル (precmd フックに登録する関数 `__zshrc_title`) |
 | `compdef` が未定義 (Ubuntu の `/etc/zsh/zshrc` が `compinit` していない) か、`zns` で読み直したとき | `compinit` ([補完](#補完)) |
 | Linux (`linux*`) | `ls -FX --color=auto` |
@@ -310,7 +310,7 @@ WSL のカーネルで動く Docker コンテナなどでも、`osrelease` が�
 
 - fnm: `~/.local/share/fnm` があれば `PATH` に足し (環境変数節の「カスタムインストール先」)、fnm があれば `eval "$(fnm env --shell zsh)"` する。`--use-on-cd` は付けていないので、`.node-version` による自動切り替えはしない。
 - nvm は読み込まない。起動のたびに約 0.55 秒かかっていた `~/.nvm/nvm.sh` の読み込みは 2026-10 に削除し、fnm に一本化した。`nvm` コマンドは使えず、npm も fnm 側の版になる (2026-10 時点で fnm 側は 11.14.1、nvm 側は 10.9.4)。fnm が無く nvm だけがある機では、node が `PATH` に入らない。
-- 環境変数節の先頭 (最初の `PATH` の変更より前) にある `typeset -gU path PATH` (_zshrc:36) で、以降の代入のたびに `PATH` の重複を取り除く。重複したパスは最初に出てきた位置に残る。非対話ガードより前にあるので、非対話の source でも効く。`-g` は、関数の中から source されても局所変数にしないため。
+- 環境変数節の `__zshrc_has` の直後 (最初の `PATH` の変更より前) にある `typeset -gU path PATH` (_zshrc:36) で、以降の代入のたびに `PATH` の重複を取り除く。重複したパスは最初に出てきた位置に残る。非対話ガードより前にあるので、非対話の source でも効く。`-g` は、関数の中から source されても局所変数にしないため。
 
 環境を引き継がずに起動した対話シェルでの `PATH` の並びは、下の 1-4 のとおり。次のコマンドで確かめられる。
 
