@@ -29,13 +29,15 @@ setup() {
 
 @test "非対話シェルから source すると非対話ガードで止まり、終了状態 0 でエラーも出ない" {
     # Claude Code や Codex のシェルスナップショットと同じ読み込み方。ガードより前の PATH は設定され、後の alias・setopt・関数は定義されない
-    run -0 --separate-stderr zsh -c "
+    # 起動元の PATH を固定し、~/.local/bin を rc が足したこと (親から引き継いだのではないこと) を順序で確かめる
+    run -0 --separate-stderr env PATH=/usr/bin:/bin zsh -c "
         source '$ZSHRC' || { print \"source の終了状態が \$?\"; exit 1; }
         if alias zns >/dev/null; then print 'ガードより後の alias zns が定義された'; exit 1; fi
         if [[ -o autopushd ]]; then print 'ガードより後の setopt auto_pushd が有効になった'; exit 1; fi
         if (( \$+functions[command_not_found_handler] )); then print 'ガードより後の command-not-found が読まれた'; exit 1; fi
         if (( \$+functions[up] )); then print 'ガードより後の関数 up が定義された'; exit 1; fi
         if [[ -n \$(print -l -- \$path | sort | uniq -d) ]]; then print 'PATH に重複がある'; exit 1; fi
+        if (( \${path[(i)\$HOME/.local/bin]} > \${path[(i)/usr/bin]} )); then print \"~/.local/bin が /usr/bin より前に無い: \$PATH\"; exit 1; fi
         print -r -- \"\$PATH\"
     "
     [ -z "$stderr" ]
@@ -48,6 +50,18 @@ setup() {
         source '$ZSHRC' || exit 1
         if alias zns >/dev/null; then print 'ガードより後の alias zns が定義された'; exit 1; fi
     "
+    [ -z "$stderr" ]
+}
+
+@test "source し直すと compinit を再実行し、後から足した補完関数を拾う" {
+    # 起動時は /etc/zsh/zshrc の compinit を使い回すが、zns のような読み直し (__zshrc_loaded が設定済み) では再実行する
+    mkdir -p "$BATS_TEST_TMPDIR/fn"
+    printf '#compdef zshrcprobe\n_files\n' > "$BATS_TEST_TMPDIR/fn/_zshrcprobe"
+    run -0 --separate-stderr zsh -i -c '
+        fpath=("$ZDOTDIR/fn" $fpath)
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ ${_comps[zshrcprobe]} == _zshrcprobe ]] || { print "読み直しで compinit が走っていない: ${_comps[zshrcprobe]:-(none)}"; exit 1; }
+    '
     [ -z "$stderr" ]
 }
 
@@ -116,9 +130,9 @@ setup() {
 }
 
 @test "対話シェルに作業用のグローバル変数を残さない" {
-    # 関数の外で local にしていたプロンプトの色変数、ホスト名補完の作業用配列 (旧名と無名関数内の local)、up のローカル変数
+    # 関数の外で local にしていたプロンプトの色変数と、ホスト名補完の作業用配列 (旧名と無名関数内の local)
     run -0 zsh -i -c '
-        for v in GREEN BLUE DEFAULT hosts _etc_hosts _ssh_hosts ssh_hosts etc_hosts to p; do
+        for v in GREEN BLUE DEFAULT hosts _etc_hosts _ssh_hosts ssh_hosts etc_hosts; do
             if (( $+parameters[$v] )); then print "変数 $v が残っている"; exit 1; fi
         done
     '
@@ -135,7 +149,9 @@ setup() {
         up bar; [[ $PWD == "$ZDOTDIR/a/src/foo/src/bar" ]] || { print "up bar: $PWD"; exit 1; }
         cd /usr/share
         up usr; [[ $PWD == /usr ]] || { print "up usr: $PWD"; exit 1; }
-        if (( $+parameters[to] )); then print "変数 to が残っている"; exit 1; fi
+        for v in to p; do
+            if (( $+parameters[$v] )); then print "up のローカル変数 $v が残っている"; exit 1; fi
+        done
     '
     run -1 --separate-stderr zsh -i -c 'cd /; up nope'
     [ "$stderr" = "no such file or directory: nope" ]
