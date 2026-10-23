@@ -72,7 +72,7 @@ fi
 ### 基本設定 ###
 ################
 
-#履歴の保存先
+# 履歴の保存先
 HISTFILE=${HOME}/.zsh_history
 # メモリに展開する履歴の数
 HISTSIZE=10000
@@ -80,51 +80,51 @@ HISTSIZE=10000
 SAVEHIST=10000
 # 重複するコマンド行は古い方を削除
 setopt hist_ignore_all_dups
-#直前と同じコマンドをヒストリに追加しない (↑↓ では今の行と同じ履歴を飛ばす)
+# 直前と同じコマンドをヒストリに追加しない (↑↓ では今の行と同じ履歴を飛ばす)
 setopt hist_ignore_dups
-#スペースで始まる場合はヒストリに追加しない
+# スペースで始まる場合はヒストリに追加しない
 setopt hist_ignore_space
 # zshプロセス間でヒストリを共有する (実行のたびに追記する動作も含む)
 setopt share_history
-#移動履歴をプッシュ(cd -[Tab]
+# 移動履歴をプッシュ(cd -[Tab]
 setopt auto_pushd
-#cd -N と cd +N の + と - の意味を入れ替える (cd -1 が直前にいたディレクトリになる)
+# cd -N と cd +N の + と - の意味を入れ替える (cd -1 が直前にいたディレクトリになる)
 setopt pushd_minus
-#移動履歴の重複禁止
-setopt PUSHD_IGNORE_DUPS
-#重複を優先して削除
+# 移動履歴の重複禁止
+setopt pushd_ignore_dups
+# 重複を優先して削除
 setopt hist_expire_dups_first
 # historyコマンドは履歴に登録しない
 setopt hist_no_store
 # 余分な空白は詰めて記録
 setopt hist_reduce_blanks
-#自動cd(cdなしでおｋ
+# 自動cd(cdなしでおｋ
 setopt auto_cd
-#コマンド修正提示 (ファイル名まで考慮)
+# コマンド修正提示 (ファイル名まで考慮)
 setopt correct_all
 # 対話入力でも # 以降をコメントとして扱う
-setopt INTERACTIVE_COMMENTS
-#command not foundの時にはインストール方法を提示
+setopt interactive_comments
+# command not foundの時にはインストール方法を提示
 if [ -f "/etc/zsh_command_not_found" ]; then
     source /etc/zsh_command_not_found
 fi
 
 
-#################
-### プロンプト ##
-#################
+##################
+### プロンプト ###
+##################
 
-#通常 (%n ユーザー名、%M ホスト名、%1~ カレントディレクトリ名。ディレクトリ名は太字の青)
+# 通常 (%n ユーザー名、%M ホスト名、%1~ カレントディレクトリ名。ディレクトリ名は太字の青)
 PROMPT='%n@%M:%B%F{blue}%1~%f%b$ '
-#複数行
+# 複数行
 PROMPT2="%_$ "
-#確認
+# 確認
 SPROMPT="%r is correct? [n,y,a,e]: "
-#右プロンプト (%* 時刻。太字の緑)
+# 右プロンプト (%* 時刻。太字の緑)
 RPROMPT='[%B%F{green}%*%f%b]'
-#出力の文字列末尾に改行コードが無い場合でも表示
+# 出力の文字列末尾に改行コードが無い場合でも表示
 unsetopt promptcr
-#タイトル (ディレクトリ名[フルパス]。タイトルを扱えない端末以外)
+# タイトル (ディレクトリ名[フルパス]。タイトルを扱えない端末以外)
 case ${TERM} in
 dumb|linux|eterm*|'')
     ;;
@@ -143,7 +143,7 @@ esac
 ### シェル変数 ###
 ##################
 
-#「/」も単語区切りとみなす。
+# 「/」も単語区切りとみなす。
 WORDCHARS=${WORDCHARS:s,/,,}
 
 
@@ -205,9 +205,9 @@ if __zshrc_has emacs; then
 fi
 
 
-###########
-## alias ##
-###########
+#############
+### alias ###
+#############
 ## zcompile and source
 alias zns="zcompile ~/.zshrc && source ~/.zshrc"
 
@@ -227,7 +227,7 @@ if __zshrc_has emacs; then
     alias erestart="ekill && estart"
     alias ecli="emacsclient -nw -a ''"
     alias e="emacs -nw"
-    #打ち間違い対策
+    # 打ち間違い対策
     alias emasc="emacs"
     alias em="emacs"
 fi
@@ -289,29 +289,29 @@ alias -g S='| sort'
 alias -g W='| wc'
 alias -g X='| xargs'
 
-#ls
+# ls
 case ${OSTYPE} in
   linux*)  # ここに Linux 向けの設定
-    alias ls="ls -FX --color=auto"  #ディレクトリには/, 色つき
+    alias ls="ls -FX --color=auto"  # ディレクトリには/, 色つき
   ;;
 esac
-alias la="ls -a"                #隠しファイルも
-alias ll="ls -lh"               #詳細付き, ファイルサイズに接頭語
-alias lla="ls -lha"             #全部詳細
+alias la="ls -a"                # 隠しファイルも
+alias ll="ls -lh"               # 詳細付き, ファイルサイズに接頭語
+alias lla="ls -lha"             # 全部詳細
 
-#mv
+# mv
 alias mv='mv -i'
-#cp
-alias cp="cp -i"    #上書きを確認
-#rm
+# cp
+alias cp="cp -i"    # 上書きを確認
+# rm
 alias rm='rm -v'
-#バックアップ (*~) と Emacs の自動保存ファイル (#*#) を削除する (無い側は無視する。~ と # はコメントの影響を受けないようエスケープ)
+# バックアップ (*~) と Emacs の自動保存ファイル (#*#) を削除する (無い側は無視する。~ と # はコメントの影響を受けないようエスケープ)
 alias rmtmp='rm -v -- *\~(N) \#*\#(N)'
 
-#ln
+# ln
 alias ln="ln -i -v"
 
-#拡張子で自動化 (開くコマンドがある場合だけ)
+# 拡張子で自動化 (開くコマンドがある場合だけ)
 if __zshrc_has emacs; then
     alias -s c=emacs
     alias -s C=emacs
@@ -331,21 +331,21 @@ if __zshrc_has zipinfo; then
 fi
 ## クリップボード (xsel がある場合だけ)
 if __zshrc_has xsel; then
-    #stdoutをクリップボードへ
+    # stdoutをクリップボードへ
     alias -g toclip="|xsel -bi"
-    #stdout+stderrをクリップボードへ
+    # stdout+stderrをクリップボードへ
     alias -g toclipall=" 2>&1|xsel -bi"
-    #stdoutをクリップボードとstdoutへ
+    # stdoutをクリップボードとstdoutへ
     alias -g andclip="|(cat 1>&2|xsel -bi)2>&1"
-    #stdout+stderrをクリップボードとstdoutへ
+    # stdout+stderrをクリップボードとstdoutへ
     alias -g andclipall=" 2>&1|(cat 1>&2|xsel -bi)2>&1"
 fi
-#gnome-open (gnome-open があり、Go 言語の go が無い場合だけ)
+# gnome-open (gnome-open があり、Go 言語の go が無い場合だけ)
 if __zshrc_has gnome-open && ! __zshrc_has go; then
     alias go="gnome-open"
 fi
 
-#打ち間違い対策
+# 打ち間違い対策
 alias s="ls"
 alias l="ls"
 alias ks="ls"
@@ -370,13 +370,13 @@ bindkey '^[[3~' delete-char
 bindkey '^[[1;5C' forward-word
 bindkey '^[[1;5D' backward-word
 
-#M-↑でcdup
+# M-↑でcdup
 zle -N cdup
 bindkey '^[[1;3A' cdup
-#M-←でpopd
+# M-←でpopd
 zle -N cdback
 bindkey '^[[1;3D' cdback
-#M-` と M-' で入力中の行全体を `…` / '…' で囲む
+# M-` と M-' で入力中の行全体を `…` / '…' で囲む
 bindkey -s '^[`' '`^A `^A'
 bindkey -s "^['" "'^A '^A"
 
@@ -385,7 +385,7 @@ bindkey -s "^['" "'^A '^A"
 ### 補完ルール ###
 ##################
 
-#コマンドラインオプションも補完
+# コマンドラインオプションも補完
 # Ubuntu では /etc/zsh/zshrc が同じ dump (~/.zcompdump) で compinit 済み (compdef が定義済み) なので、起動時は再実行しない
 # (補完関数の検査に約 0.1 秒かかる)。zns で読み直したとき (__zshrc_loaded が設定済み) は従来どおり実行し、後から入れた補完関数を拾う
 if (( ! $+functions[compdef] || $+__zshrc_loaded )); then
@@ -393,24 +393,24 @@ if (( ! $+functions[compdef] || $+__zshrc_loaded )); then
     compinit
 fi
 __zshrc_loaded=1
-#git の alias に git の補完を割り当てる (complete_aliases が有効なので alias 名ごとに指定する)
+# git の alias に git の補完を割り当てる (complete_aliases が有効なので alias 名ごとに指定する)
 compdef _git gts=git-status gtd=git-diff gta=git-add gtc=git-commit gtm=git-merge gtp=git-push gtl=git-log gtco=git-checkout
-#補完関数をできるだけ過剰に
+# 補完関数をできるだけ過剰に
 zstyle ':completion:*' verbose yes
 zstyle ':completion:*:descriptions' format '%B%d%b'
 zstyle ':completion:*:messages' format '%d'
 zstyle ':completion:*:warnings' format 'No matches for: %d'
 zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-]#)*=01;34=0=01'
-#プロセス ID の補完 (kill など) では自分のプロセスだけを出す ($EUID は補完の実行時に展開する)
+# プロセス ID の補完 (kill など) では自分のプロセスだけを出す ($EUID は補完の実行時に展開する)
 zstyle ':completion:*:*:*:*:processes' command 'ps -u $EUID -o pid,user,comm -w -w'
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*:cd:*' tag-order local-directories directory-stack path-directories
-#LS_COLORS を設定し、補完候補も ls と同じ色で表示する (dircolors がある場合だけ。-b: SHELL の値に関係なく sh 形式で出力させる)
+# LS_COLORS を設定し、補完候補も ls と同じ色で表示する (dircolors がある場合だけ。-b: SHELL の値に関係なく sh 形式で出力させる)
 if __zshrc_has dircolors; then
     eval "$(dircolors -b)"
     zstyle ':completion:*:default' list-colors ${LS_COLORS}
 fi
-#ホスト名補完の候補を ~/.ssh/known_hosts (ハッシュ化された行を除く)・/etc/hosts・自ホスト名・localhost から作る
+# ホスト名補完の候補を ~/.ssh/known_hosts (ハッシュ化された行を除く)・/etc/hosts・自ホスト名・localhost から作る
 # (無名関数の local に閉じ、グローバル変数を残さない。extended_glob が無効なので /etc/hosts の IP も候補に残る)
 () {
     local -a ssh_hosts etc_hosts
@@ -423,31 +423,31 @@ fi
     # 自ホスト名は hostname コマンドではなく zsh の $HOST を使う (hostname が無い環境でもエラーにしない。環境変数 HOST が無ければ同じ値)
     zstyle ':completion:*:hosts' hosts $ssh_hosts $etc_hosts $HOST localhost
 }
-#補完の時に大文字小文字を区別しない(但し、大文字を打った場合は小文字に変換しない)
+# 補完の時に大文字小文字を区別しない(但し、大文字を打った場合は小文字に変換しない)
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
-#矢印キー補完選択
+# 矢印キー補完選択
 zstyle ':completion:*:default' menu select
-#補完候補が複数ある時に、一覧表示する
+# 補完候補が複数ある時に、一覧表示する
 setopt auto_list
-#タブキー連打で補完候補を順に表示
+# タブキー連打で補完候補を順に表示
 setopt auto_menu
-#補完候補が複数ある時、すぐに最初の候補を補完する (menu select により候補の選択メニューも出る)
+# 補完候補が複数ある時、すぐに最初の候補を補完する (menu select により候補の選択メニューも出る)
 setopt menu_complete
-#補完候補一覧でファイルの種別を識別マーク表示(ls -F の記号)
+# 補完候補一覧でファイルの種別を識別マーク表示(ls -F の記号)
 setopt list_types
-#'='以降でも補完できるようにする( --prefix=/usr 等の場合)
+# '='以降でも補完できるようにする( --prefix=/usr 等の場合)
 setopt magic_equal_subst
-#alias を展開せず、別のコマンドとして補完する (rm・ls など同名 alias のオプション補完をそのまま保つ。git の alias は上の compdef で割り当てる)
+# alias を展開せず、別のコマンドとして補完する (rm・ls など同名 alias のオプション補完をそのまま保つ。git の alias は上の compdef で割り当てる)
 setopt complete_aliases
-#パラメータ名の補完で自動的に入った空白などを、次に } などを打ったときに消す
+# パラメータ名の補完で自動的に入った空白などを、次に } などを打ったときに消す
 setopt auto_param_keys
-#末尾の/を消去しない
+# 末尾の/を消去しない
 setopt noautoremoveslash
 
 
-############
-## その他 ##
-############
+##############
+### その他 ###
+##############
 
 ### WSL
 # WSL のときだけ設定する (wsl.exe から起動したシェルは WSL_DISTRO_NAME を持つ。ssh などで持たないときはカーネル名で判定する)
