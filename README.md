@@ -15,7 +15,7 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 
 | ファイル | 役割 |
 |---|---|
-| `_zshrc` | 設定本体 (490 行)。`~/.zshrc` からリンクして使う。環境やツールに依存する設定はガードで囲み、該当しない環境では何もしない |
+| `_zshrc` | 設定本体 (497 行)。`~/.zshrc` からリンクして使う。環境やツールに依存する設定はガードで囲み、該当しない環境では何もしない |
 | `README.md` | このファイル |
 | `AGENTS.md` / `CLAUDE.md` / `.claude/` / `.codex/` | AI エージェント向けの変更規約と設定 ([エージェント向け](#エージェント向け)) |
 | `.gitignore` | `*.zwc`、`.zcompdump*`、`/README.html` (mdh で README を変換した HTML)、Claude Code のローカル設定 (`CLAUDE.local.md`、`.claude/settings.local.json`、`.claude/hookify.*.local.md`、`.claude/worktrees/`) を除外 |
@@ -29,7 +29,7 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 
 | 条件 | 有効になる設定 |
 |---|---|
-| 常に | 履歴・ディレクトリスタック・補完の setopt と `INTERACTIVE_COMMENTS`、`LANG`、`~/.local/bin` と `~/.local/share/fnm` の `PATH`、`TERM`、プロンプトと端末タイトルの `precmd`、`WORDCHARS`、関数 `up` `cdup` `cdback`、`zns`、git の alias、`la` `ll` `lla`、`mv -i` `cp -i`、`rm -v` `ln -i -v`、`rmtmp`、`poweroff` `reboot`、グローバル alias (`G` `L` `H` `T` `S` `W` `X` `sl` `LS`)、打ち間違い対策 (`s` `l` `ks` `lsa` `cd..`)、キーバインド、補完ルール、`typeset -U path PATH` |
+| 常に | 履歴・ディレクトリスタック・補完の setopt と `INTERACTIVE_COMMENTS`、`LANG`、`~/.local/bin` の `PATH`、`TERM`、プロンプトと端末タイトルの `precmd`、`WORDCHARS`、関数 `up` `cdup` `cdback`、`zns`、git の alias、`la` `ll` `lla`、`mv -i` `cp -i`、`rm -v` `ln -i -v`、`rmtmp`、`poweroff` `reboot`、グローバル alias (`G` `L` `H` `T` `S` `W` `X` `sl` `LS`)、打ち間違い対策 (`s` `l` `ks` `lsa` `cd..`)、キーバインド、補完ルール、`typeset -U path PATH` |
 | Linux (`linux*`) | `ls -FX --color=auto`。さらに `dircolors` があれば `LS_COLORS` と補完候補の色付け |
 | WSL | `umask 022`、`DISPLAY=:0`、`LC_ALL=ja_JP.UTF-8`。`~/.Xauthority` があれば `XAUTHORITY` も |
 | fnm | `eval "$(fnm env --shell zsh)"` |
@@ -40,6 +40,7 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 | trash-put | `rm` を `trash-put` に (ただし直後の `rm -v` で上書きされるので効かない。[注意点](#動作に影響するもの)) |
 | gnome-open があり、`go` コマンドが無い | `go` → `gnome-open` |
 | `~/.nvm/nvm.sh` | nvm と nvm の bash_completion の読み込み |
+| `~/.local/share/fnm` | `PATH` の先頭に追加 (環境変数節の「カスタムインストール先」) |
 | `/etc/zsh_command_not_found` | command-not-found の読み込み |
 | `~/.ssh/known_hosts` / `/etc/hosts` | ホスト名補完の候補に読み込む |
 
@@ -51,7 +52,7 @@ perl (`up`)、git、sudo (`poweroff` `reboot`)、coreutils (`basename`、`whoami
 
 非端末ガード `[ $#PROMPT -eq 0 -o $#TERM -eq 0 ] && return` (_zshrc:105) は、`PROMPT` か `TERM` が空ならその行で読み込みを打ち切る。対話シェルでは `PROMPT` に初期値がある (`zsh -fic 'echo $#PROMPT'` は 5、非対話の `zsh -fc` では 0) ので、実際に効くのは非対話の zsh から `~/.zshrc` を `source` したときなど。これに当たる主な例は、Claude Code や Codex がシェルスナップショットを作るために非対話シェルから `~/.zshrc` を source する場合 ([AGENTS.md](AGENTS.md))。このときガードより後の alias・関数・setopt・nvm・WSL 節は読まれない。
 
-- ガードより前 (非対話でも適用される): 履歴とディレクトリスタックの setopt、`INTERACTIVE_COMMENTS`、command-not-found の読み込み、関数 `__zshrc_has`、`LANG`、`PATH` と fnm (fnm がある場合)、`TERM`、`EDITOR` (emacsclient がある場合)
+- ガードより前 (非対話でも適用される): 履歴とディレクトリスタックの setopt、`INTERACTIVE_COMMENTS`、command-not-found の読み込み、関数 `__zshrc_has`、`LANG`、`PATH` (`~/.local/bin`。`~/.local/share/fnm` はある場合)、fnm (fnm がある場合)、`TERM`、`EDITOR` (emacsclient がある場合)
 - ガードより後 (非対話では適用されない): プロンプト以降の全部。WSL 節 (`umask`、`DISPLAY`、`LC_ALL`、`XAUTHORITY`)、nvm、`typeset -U path PATH` もこちらに入る
 
 環境変数と PATH はガードより前、対話専用の設定は後に置く。
@@ -82,7 +83,7 @@ perl (`up`)、git、sudo (`poweroff` `reboot`)、coreutils (`basename`、`whoami
 | nkf | `nkfutf8` `nkfsjis` |
 | g++、online-judge-tools (`oj`) | `g` `a` `g++11` `gna` (g++)。`gojt` は oj もある場合だけ |
 | GNU GLOBAL (`gtags`)。`gtags-table` は Universal Ctags か Exuberant Ctags も (gtags.conf の `universal-ctags` / `exuberant-ctags` ラベルの `ctagscom` が指す実体。Debian 系では `/usr/bin/ctags-universal` / `/usr/bin/ctags-exuberant`) | `gtags-clear` `rmgtags`。`gtags-table` は起動時に `gtags --config=ctagscom` で実行できる ctags のラベルを選び (universal-ctags 優先)、どちらも無ければ定義しない |
-| fnm | 起動時の `PATH` (`~/.local/share/fnm`、`~/.local/bin` など) にあれば `eval "$(fnm env --shell zsh)"` を実行する ([Node.js](#nodejs)) |
+| fnm | `~/.local/share/fnm` があれば `PATH` に足し (環境変数節の「カスタムインストール先」)、起動時の `PATH` に fnm があれば `eval "$(fnm env --shell zsh)"` を実行する ([Node.js](#nodejs)) |
 | nvm | `~/.nvm/nvm.sh` があれば末尾で読み込む |
 | trash-put | あれば `rm` を `trash-put` にするが、直後の `rm -v` で上書きされる ([注意点](#動作に影響するもの)) |
 | command-not-found (Ubuntu) | `/etc/zsh_command_not_found` があれば読み込み、未インストールのコマンドにパッケージ候補を出す |
@@ -137,7 +138,7 @@ perl (`up`)、git、sudo (`poweroff` `reboot`)、coreutils (`basename`、`whoami
 
 - `ZDOTDIR` は使わず (未設定か `$HOME` のまま)、`$HOME/.zshrc` を読ませる前提。`zns` も `~/.zshrc` を直接指す。
 - このリポジトリが用意するのは `~/.zshrc` だけで、`~/.zshenv`・`~/.zprofile`・`~/.zlogin` は使わない。ただし Ubuntu では `/etc/zsh/zshrc` が `~/.zshrc` より先に読まれ、キーマップや `compinit` に影響する ([注意点](#動作に影響するもの))。`/etc/zsh/zshenv` も先に読まれるが、`PATH` が空 (か `/bin:/usr/bin`) のときに初期値を入れるだけ。
-- 環境変数節は `fnm env` (_zshrc:92-94) の直前に `~/.local/bin` と `~/.local/share/fnm` だけを `PATH` に足す (_zshrc:89-90)。fnm は `~/.local/share/fnm/fnm` (Linux で公式インストーラを使ったときの既定) か `~/.local/bin` に置くか、zsh 起動時に `PATH` が通っている場所に入れる。それ以外 (cargo の `~/.cargo/bin`、Apple Silicon の Homebrew の `/opt/homebrew/bin` など) に入れたときは `__zshrc_has fnm` が偽になって fnm が設定されないので、_zshrc:90 のパスをその場所に書き換える。公式インストーラは `$SHELL` が zsh だと `${ZDOTDIR:-$HOME}/.zshrc` に設定を追記するので、いつ実行する場合も `--skip-shell` を付ける (付けないと、リンク後ならリポジトリの `_zshrc` に追記され、手順 3 の直後なら通常ファイルの `~/.zshrc` ができて手順 4 の `ln -s` が `File exists` で失敗する)。
+- 環境変数節は `fnm env` の直前に `~/.local/bin` と、あれば `~/.local/share/fnm` を `PATH` に足す。後者は「カスタムインストール先」(標準でない場所に入れたツールの `PATH` をまとめる置き場) にある。fnm は `~/.local/share/fnm/fnm` (Linux で公式インストーラを使ったときの既定) か `~/.local/bin` に置くか、zsh 起動時に `PATH` が通っている場所に入れる。それ以外 (cargo の `~/.cargo/bin`、Homebrew の `/opt/homebrew/bin` など) に入れたときは `__zshrc_has fnm` が偽になって fnm が設定されないので、「カスタムインストール先」にその場所を同じ形で足す。公式インストーラは `$SHELL` が zsh だと `${ZDOTDIR:-$HOME}/.zshrc` に設定を追記するので、いつ実行する場合も `--skip-shell` を付ける (付けないと、リンク後ならリポジトリの `_zshrc` に追記され、手順 3 の直後なら通常ファイルの `~/.zshrc` ができて手順 4 の `ln -s` が `File exists` で失敗する)。
 - `~/.zshrc` を差し替えずに試すなら、[AGENTS.md](AGENTS.md) の起動検査と同じく一時ディレクトリを `ZDOTDIR` にする。中で `zns` を打つと本物の `~/.zshrc` を読むので注意。また履歴は本物の `~/.zsh_history` に書き込まれ、ほかのシェルとも共有される (`HISTFILE` は `$HOME` 固定で、`share_history` が有効)。避けたいときは中で `HISTFILE=$ZDOTDIR/.zsh_history` を実行するか、`fc -p` で一時的な履歴に切り替える。
 
   ```sh
@@ -304,7 +305,7 @@ WSL のカーネルで動く Docker コンテナなどでも、`osrelease` が�
 
 ### Node.js
 
-- fnm: `PATH` に `~/.local/share/fnm` を足し、fnm があれば `eval "$(fnm env --shell zsh)"` する (_zshrc:90-94)。`--use-on-cd` は付けていないので、`.node-version` による自動切り替えはしない。
+- fnm: `~/.local/share/fnm` があれば `PATH` に足し (環境変数節の「カスタムインストール先」)、fnm があれば `eval "$(fnm env --shell zsh)"` する。`--use-on-cd` は付けていないので、`.node-version` による自動切り替えはしない。
 - nvm: 末尾で `~/.nvm/nvm.sh` と `bash_completion` があれば読み込む (_zshrc:514-518)。
 - 最後の `typeset -U path PATH` (_zshrc:525) で `PATH` の重複を取り除く。重複したパスは最初に出てきた位置に残る。
 

@@ -82,8 +82,15 @@ export LANG=ja_JP.UTF-8
 ### .local 関連
 ## 実行バイナリパス
 export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/.local/share/fnm:$PATH"
-# fnm (Node.js のバージョン管理) がある場合だけ設定する (--shell zsh: シェルの推定に ps を使わせない)
+
+### カスタムインストール先
+## 標準でない場所に入れたツールの PATH はここにまとめる (ディレクトリがある場合だけ足す。非端末ガードより前に置く)
+# fnm (Node.js のバージョン管理)。Linux 用の公式インストーラーの既定の導入先
+if [ -d "$HOME/.local/share/fnm" ]; then
+    export PATH="$HOME/.local/share/fnm:$PATH"
+fi
+
+## fnm がある場合だけ設定する (--shell zsh: シェルの推定に ps を使わせない)
 if __zshrc_has fnm; then
     eval "$(fnm env --shell zsh)"
 fi
