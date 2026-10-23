@@ -16,6 +16,7 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 | ファイル | 役割 |
 |---|---|
 | `_zshrc` | 設定本体 (497 行)。`~/.zshrc` からリンクして使う。環境やツールに依存する設定はガードで囲み、該当しない環境では何もしない |
+| `test/zshrc.bats` | `_zshrc` の回帰テスト。`bats test` で実行する ([設定を変更したとき](#設定を変更したとき)) |
 | `README.md` | このファイル |
 | `AGENTS.md` / `CLAUDE.md` / `.claude/` / `.codex/` | AI エージェント向けの変更規約と設定 ([エージェント向け](#エージェント向け)) |
 | `.gitignore` | `*.zwc`、`.zcompdump*`、`/README.html` (mdh で README を変換した HTML)、Claude Code のローカル設定 (`CLAUDE.local.md`、`.claude/settings.local.json`、`.claude/hookify.*.local.md`、`.claude/worktrees/`) を除外 |
@@ -147,13 +148,15 @@ perl (`up`)、git、sudo (`poweroff` `reboot`)、coreutils (`basename`、`whoami
 
 ### 設定を変更したとき
 
-リンク先 (リポジトリ内のファイル) を編集し、構文を確かめてから `zns` で反映する。
+リンク先 (リポジトリ内のファイル) を編集し、テストで確かめてから `zns` で反映する。
 
 ```sh
 zsh -n ~/.config/zsh/_zshrc   # 構文チェック
+bats ~/.config/zsh/test       # 回帰テスト (push 前に実行する)
 zns                           # = zcompile ~/.zshrc && source ~/.zshrc
 ```
 
+- テストは `test/zshrc.bats` にあり、[bats-core](https://github.com/bats-core/bats-core) 1.5 以上で動く (Ubuntu なら `sudo apt install bats`)。[AGENTS.md](AGENTS.md) の構文検査・起動検査 (対話シェルで最後まで読まれ、stderr に出力がない) に加えて、非対話シェルから source したときに非端末ガードで止まること、常に定義する関数・alias がそろっていること、最終行が `typeset -U path PATH` であること、ユーザー名入りの絶対パスが無いことを確かめる。`~/.zshrc` は差し替えず、一時ディレクトリを `ZDOTDIR` にして作業中の `_zshrc` を読ませる。
 - `zcompile ~/.zshrc` の出力 `~/.zshrc.zwc` はリンクと同じ `$HOME` にでき、リポジトリ内にはできない。作られたファイルは読み取り専用 (`-r--r--r--`)。
 - zsh は `.zwc` が元ファイルと同じか新しいときだけ `.zwc` を使い、古ければ元ファイルを読む。`zns` を忘れても次に起動したシェルには編集内容が反映される (その間 `.zwc` は使われない)。
 - 今のシェルで `source` し直しても、一度定義した alias・関数・setopt は残る。定義を消したときは新しいシェルで確かめる。
