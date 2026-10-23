@@ -72,6 +72,10 @@
   `Co-Authored-By` トレーラーを付けない。type は `feat` / `fix` / `docs` / `style` /
   `refactor` / `chore`。`scope` は任意で、変更対象が明確になる場合だけ付ける。
   既存履歴は英語の自由形式だが書き換えず、新規コミットから本形式とする。
+- worktree で進めるタスクは `.claude/worktrees/<name>`（gitignored）に `origin/master` から作り、
+  x-ship で `master` へ fast-forward マージして push したあと、同じ作業で worktree とブランチを
+  削除する。worktree の `_zshrc` は `~/.zshrc` の symlink 先ではないため、マージするまで実環境に
+  反映されない。マージ時もメインチェックアウトの未コミット変更は保持する。
 
 ## 検証と完了条件
 
@@ -107,10 +111,14 @@ JSON と TOML として読み込めることも確認する
 ファイル名を報告する。そのうえで、実行した検証、README.md への影響の有無、未検証事項と理由を
 日本語で簡潔に報告する。動作・整合性を確認できなければ完了扱いにしない。
 
-## エージェント設定
+## エージェント設定とスキル
 
 - 共通方針は本書に置く。エージェント固有の設定は `.claude/`・`.codex/` に置き、
   規約を複製せず本書を参照する。実在しない参照を作らない。
 - Claude Code: `CLAUDE.md` が本書を import する。固有の設定ファイルは `CLAUDE.md` を参照する。
 - Codex: [.codex/README.md](.codex/README.md) を参照する。
-- このリポジトリにスキルは置かない。
+- 共通スキルの正本は `.claude/skills/<name>/SKILL.md`。`.codex/skills` は `.claude/skills` への
+  symlink とし、内容を複製しない。一覧と用途は [.codex/README.md](.codex/README.md) にある。
+  スキルは明示されたとき、または依頼に必要なときに使い、計画・レビュー・ship をすべての編集へ
+  自動適用しない。Codex による外部レビューは `.claude/scripts/codex-review.sh` を通して
+  read-only サンドボックスで実行し、成果物をコミットしない。

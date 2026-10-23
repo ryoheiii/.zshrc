@@ -22,9 +22,19 @@ zsh 設定ファイル 1 つの小さなリポジトリに過剰な仕組みを�
 | `.claude/settings.json` | 共有するプロジェクト設定（権限、コミット属性） | コミット対象 |
 | `.claude/settings.local.json` | 絶対パスなどローカル環境固有の設定 | gitignored |
 | `CLAUDE.local.md` | 個人用の追加指示 | gitignored |
+| `.claude/skills/`・`.claude/scripts/` | Codex と共有するワークフロースキルと、Codex レビューのラッパー | コミット対象 |
+| `.claude/worktrees/` | EnterWorktree が作るタスク worktree | gitignored |
 
 Claude Code が共有設定へ権限を自動追加した場合は、コミット前に内容を確認し、
 マシン固有のものは `.claude/settings.local.json` へ移す。ローカル設定をコミットしない。
+
+## ワークフロースキル
+
+一覧と用途は [.codex/README.md](.codex/README.md) にある。worktree で進めるタスクは
+`/x-preflight` →（設計判断があれば `/x-deep-plan` → `/x-codex-review-plan`）→ 実装 →
+`/x-codex-review-impl final` → `/x-ship` の順で使う。明示されたとき、または依頼に必要なときだけ使い、
+すべての編集へ自動適用しない。Codex レビューのラッパーは `run_in_background: true` で起動して
+完了通知を待つ。
 
 ## レビューコマンド
 
@@ -32,3 +42,5 @@ Claude Code が共有設定へ権限を自動追加した場合は、コミッ�
 |---|---|
 | `/code-review` | 現在の変更差分を品質、回帰、検証の観点からレビューする |
 | `/security-review` | `origin/HEAD` より先行するコミット済みの差分をセキュリティ観点でレビューする。未コミットの変更は対象外なので、コミット後・push 前に使う |
+| `/x-codex-review-plan` | 実装計画を Codex CLI で敵対的にレビューする |
+| `/x-codex-review-impl` | 未コミット変更とブランチ差分を Codex CLI で敵対的にレビューする。`final` は `/x-ship` の承認記録を作る |
