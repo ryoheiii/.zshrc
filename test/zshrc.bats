@@ -34,6 +34,7 @@ setup() {
         if alias zns >/dev/null; then print 'ガードより後の alias zns が定義された'; exit 1; fi
         if [[ -o autopushd ]]; then print 'ガードより後の setopt auto_pushd が有効になった'; exit 1; fi
         if (( \$+functions[command_not_found_handler] )); then print 'ガードより後の command-not-found が読まれた'; exit 1; fi
+        if (( \$+functions[up] )); then print 'ガードより後の関数 up が定義された'; exit 1; fi
         if [[ -n \$(print -l -- \$path | sort | uniq -d) ]]; then print 'PATH に重複がある'; exit 1; fi
         print -r -- \"\$PATH\"
     "
@@ -87,7 +88,7 @@ setup() {
     [ "${lines[1]}" = '"^[[F" end-of-line' ]
 }
 
-@test "TERM は xterm のときだけ xterm-256color に昇格し、端末タイトルは dumb 以外で設定する" {
+@test "TERM は xterm のときだけ xterm-256color に昇格し、端末タイトルは dumb などタイトルを扱えない端末以外で設定する" {
     # precmd_functions が未定義 (フックを登録していない) なら添字 (I) は空になるので 0 に寄せる
     run -0 env TERM=xterm zsh -i -c 'print -r -- "$TERM ${precmd_functions[(I)__zshrc_title]:-0}"'
     [ "$output" = "xterm-256color 1" ]
@@ -115,9 +116,9 @@ setup() {
 }
 
 @test "対話シェルに作業用のグローバル変数を残さない" {
-    # 関数の外で local にしていたプロンプトの色変数、ホスト名補完の作業用配列、up のローカル変数
+    # 関数の外で local にしていたプロンプトの色変数、ホスト名補完の作業用配列 (旧名と無名関数内の local)、up のローカル変数
     run -0 zsh -i -c '
-        for v in GREEN BLUE DEFAULT hosts _etc_hosts _ssh_hosts to; do
+        for v in GREEN BLUE DEFAULT hosts _etc_hosts _ssh_hosts ssh_hosts etc_hosts to p; do
             if (( $+parameters[$v] )); then print "変数 $v が残っている"; exit 1; fi
         done
     '
