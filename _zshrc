@@ -393,8 +393,10 @@ if (( ! $+functions[compdef] || $+__zshrc_loaded )); then
     compinit
 fi
 __zshrc_loaded=1
-# git の alias に git の補完を割り当てる (complete_aliases が有効なので alias 名ごとに指定する)
-compdef _git gts=git-status gtd=git-diff gta=git-add gtc=git-commit gtm=git-merge gtp=git-push gtl=git-log gtco=git-checkout
+# git の alias に git の補完を割り当てる (complete_aliases が有効なので alias 名ごとに指定する。compinit が中断された場合は何もしない)
+if (( $+functions[compdef] )); then
+    compdef _git gts=git-status gtd=git-diff gta=git-add gtc=git-commit gtm=git-merge gtp=git-push gtl=git-log gtco=git-checkout
+fi
 # 補完関数をできるだけ過剰に
 zstyle ':completion:*' verbose yes
 zstyle ':completion:*:descriptions' format '%B%d%b'
