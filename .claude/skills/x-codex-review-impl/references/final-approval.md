@@ -13,6 +13,15 @@ final は clean tree が必須である。`git status --porcelain` が非空な�
 linked worktree では `<メインチェックアウト>/.git/worktrees/<name>/review-state/`）に置く。
 追跡対象にならず、`git worktree remove` で worktree と一緒に消える。
 
+final レビューを開始するときは、まず同じブランチの既存の承認記録を削除する。前回の APPROVED が
+残っていると、今回 REVISE になっても x-ship のゲートが通ってしまう。
+
+```bash
+set -eu
+BRANCH_SAFE="$(printf '%s' "$(git branch --show-current)" | tr '/' '-')"
+rm -f -- "$(git rev-parse --path-format=absolute --git-path "review-state/final-approval-${BRANCH_SAFE}")"
+```
+
 APPROVED 後、同じブランチ・同じ HEAD・clean tree であることを再確認して初めて
 x-ship が照合する記録を書く。次は Bash で実行し、`REVIEWED_BRANCH`・`REVIEWED_HEAD`・`REVIEWED_BASE` には
 レビュー前に記録した実際の値を渡す（承認後の現在値で代用しない）。

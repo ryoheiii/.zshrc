@@ -13,8 +13,9 @@ allowed-tools: Bash, Read, Write, Grep, Glob
 
 - `step`（既定）: dirty tree でも実行できる。承認記録は作らない。
 - `final`: x-ship 用のブランチ全体のレビュー。
-  この場合だけ [最終承認の契約](references/final-approval.md) を先に読み、clean tree と
-  レビューした HEAD に結びつく承認記録を扱う。step はこのゲートの代わりにならない。
+  この場合だけ [最終承認の契約](references/final-approval.md) を先に読み、既存の承認記録を
+  失効させてから、clean tree とレビューした HEAD に結びつく承認記録を扱う。
+  step はこのゲートの代わりにならない。
 
 ## レビュー材料
 

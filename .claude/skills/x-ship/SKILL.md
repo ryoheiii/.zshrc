@@ -11,7 +11,8 @@ push → 後片付けまでを一気通貫で行う。
 ## 引数
 
 - `$ARGUMENTS`: コミットメッセージや変更概要の補足（任意）。
-  `--no-push` を含む場合はローカルマージまでで終了する。
+  `--no-push` を含む場合は push だけを省略し、master へのローカルマージと後片付けまで行う
+  （push は後でメインチェックアウトから `git push origin master` を実行する）。
 
 ## 前提とルール
 
@@ -32,11 +33,16 @@ push → 後片付けまでを一気通貫で行う。
 ```bash
 BRANCH="$(git branch --show-current)"
 case "$BRANCH" in master|'') echo "停止: タスク worktree のブランチで実行する"; exit 2;; esac
+SHIP_STATE="$(git rev-parse --absolute-git-dir)/ship-state"
+if [ -r "$SHIP_STATE" ]; then echo "ship-state あり（Step 6 まで完了済み）:"; cat "$SHIP_STATE"; fi
 git status --porcelain
 git rev-list master..HEAD --oneline
 ```
 
 - master 上なら停止する。
+- `ship-state` がある → 前回の Step 6 でマージ済み（push 失敗後の再実行など）。clean で、
+  `MERGE_SHA` が `git rev-parse master` と一致することを確認して Step 7 から再開する。
+  一致しなければ停止して報告する。
 - dirty（未コミット変更あり）→ Step 2 へ。
 - clean かつ master から ahead のコミットあり → Step 2 をスキップして Step 4 へ（resume）。
 - clean かつ ahead なし → 「ship 対象がありません」と報告して停止する。
@@ -89,6 +95,8 @@ fi
 
 - `MISSING_OR_STALE` の場合は `/x-codex-review-impl final` を実行して APPROVED を得てから
   このステップを再実行する。**APPROVED なしでマージへ進まない**。
+- 承認記録は final レビューの開始時に失効させ、APPROVED 後にだけ作り直される
+  （[最終承認の契約](../x-codex-review-impl/references/final-approval.md)）。
 - ドキュメントのみの軽微な変更でゲートを省略したい場合は、ユーザーの明示同意を得て
   省略した旨を最終報告に残す。
 
@@ -116,8 +124,9 @@ MAIN_HEAD="$(git -C "$MAIN_ROOT" rev-parse HEAD)"
 # このステップより前に master が更新されていた場合も検出する。
 git merge-base --is-ancestor "$MAIN_HEAD" "$TASK_BRANCH"
 # マージが書き換えるファイルに未コミット変更があれば、git が拒否する前に止める。
-if [ -n "$DIRTY_BEFORE" ] && git diff --name-only "$MAIN_HEAD" "$TASK_BRANCH" |
-   grep -Fx -f <(printf '%s\n' "$DIRTY_BEFORE" | cut -c4- | sed 's/^.* -> //'); then
+# rename は元と先の両方を照合する。見逃しても git 自身が上書きを拒否する。
+if [ -n "$DIRTY_BEFORE" ] && git diff --name-only --no-renames "$MAIN_HEAD" "$TASK_BRANCH" |
+   grep -Fx -f <(printf '%s\n' "$DIRTY_BEFORE" | cut -c4- | sed 's/ -> /\n/'); then
   echo "停止: 上記のファイルはメインチェックアウトに未コミット変更があります" >&2
   exit 1
 fi
@@ -177,11 +186,10 @@ if [ -n "$(git for-each-ref --format='%(upstream)' "refs/heads/$TASK_BRANCH")" ]
   git branch --unset-upstream "$TASK_BRANCH"
 fi
 git branch -d "$TASK_BRANCH"
-if [ "$SHIP_PUSH" = yes ] && git show-ref --verify --quiet "refs/remotes/origin/$TASK_BRANCH"; then
-  git push origin --delete "$TASK_BRANCH"
-fi
 ```
 
+- タスクブランチは push しない運用なので、リモートブランチの削除は行わない。手動で push していた
+  場合は、未マージのコミットがないことを確認したうえでユーザーの指示で削除する。
 - Claude Code で EnterWorktree により入った worktree では、`git merge-base --is-ancestor` までを
   確認したあと、上のスクリプトの残りの代わりに ExitWorktree（`remove`）で worktree と
   ブランチを削除する（セッションの作業ディレクトリが消えるため）。
