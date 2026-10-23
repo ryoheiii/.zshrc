@@ -61,14 +61,49 @@ setup() {
         for f in __zshrc_has up cdup cdback; do
             (( $+functions[$f] )) || { print "関数 $f がない"; exit 1; }
         done
-        for a in zns gts gtd gta gtc gtm gtp gtl gtco la ll lla mv cp rm ln rmtmp poweroff reboot s l ks lsa cd..; do
+        for a in zns gts gtd gta gtc gtm gtp gtl gtco la ll lla mv cp rm ln rmtmp poweroff reboot s l ks sl LS lsa cd..; do
             (( $+aliases[$a] )) || { print "alias $a がない"; exit 1; }
         done
         # グローバル alias は引数の位置でも展開されるので、名前はクォートして渡す
-        for a in "G" "L" "H" "T" "S" "W" "X" "sl" "LS"; do
+        for a in "G" "L" "H" "T" "S" "W" "X"; do
             (( $+galiases[$a] )) || { print "グローバル alias $a がない"; exit 1; }
         done
+        # sl / LS は引数の位置で展開されないよう、通常の alias にしている
+        if (( $+galiases[sl] || $+galiases[LS] )); then print "sl / LS がグローバル alias になっている"; exit 1; fi
     '
+}
+
+@test "git の alias に git の補完が割り当てられている" {
+    run -0 zsh -i -c '
+        for a in gts:git-status gtd:git-diff gta:git-add gtc:git-commit gtm:git-merge gtp:git-push gtl:git-log gtco:git-checkout; do
+            [[ ${_comps[${a%%:*}]} == _git && ${_services[${a%%:*}]} == ${a#*:} ]] || { print "$a: comps=${_comps[${a%%:*}]} services=${_services[${a%%:*}]}"; exit 1; }
+        done
+    '
+}
+
+@test "Home / End は通常モードのシーケンスにも割り当てる" {
+    run -0 zsh -i -c 'bindkey "^[[H"; bindkey "^[[F"'
+    [ "${lines[0]}" = '"^[[H" beginning-of-line' ]
+    [ "${lines[1]}" = '"^[[F" end-of-line' ]
+}
+
+@test "TERM は xterm のときだけ xterm-256color に昇格し、端末タイトルは dumb 以外で設定する" {
+    # precmd_functions が未定義 (フックを登録していない) なら添字 (I) は空になるので 0 に寄せる
+    run -0 env TERM=xterm zsh -i -c 'print -r -- "$TERM ${precmd_functions[(I)__zshrc_title]:-0}"'
+    [ "$output" = "xterm-256color 1" ]
+    run -0 env TERM=tmux-256color zsh -i -c 'print -r -- "$TERM ${precmd_functions[(I)__zshrc_title]:-0}"'
+    [ "$output" = "tmux-256color 1" ]
+    run -0 env TERM=dumb zsh -i -c 'print -r -- "$TERM ${precmd_functions[(I)__zshrc_title]:-0}"'
+    [ "$output" = "dumb 0" ]
+}
+
+@test "rmtmp はバックアップと Emacs の自動保存ファイルだけを消す" {
+    mkdir -p "$BATS_TEST_TMPDIR/rmtmp" "$BATS_TEST_TMPDIR/empty"
+    touch "$BATS_TEST_TMPDIR/rmtmp/a~" "$BATS_TEST_TMPDIR/rmtmp/#b#" "$BATS_TEST_TMPDIR/rmtmp/-x~" "$BATS_TEST_TMPDIR/rmtmp/c"
+    run -0 zsh -i -c 'cd "$ZDOTDIR/rmtmp" && rmtmp >/dev/null && ls -A'
+    [ "$output" = "c" ]
+    # 対象が無いときは rm が missing operand で失敗する (旧 alias の no matches found と同じく終了状態 1)
+    run -1 zsh -i -c 'cd "$ZDOTDIR/empty" && rmtmp 2>/dev/null'
 }
 
 @test "typeset -gU path PATH は最初の PATH の変更と非対話ガードより前にある" {
@@ -80,9 +115,9 @@ setup() {
 }
 
 @test "対話シェルに作業用のグローバル変数を残さない" {
-    # ホスト名補完の作業用配列と、up のローカル変数
+    # 関数の外で local にしていたプロンプトの色変数、ホスト名補完の作業用配列、up のローカル変数
     run -0 zsh -i -c '
-        for v in hosts _etc_hosts _ssh_hosts to; do
+        for v in GREEN BLUE DEFAULT hosts _etc_hosts _ssh_hosts to; do
             if (( $+parameters[$v] )); then print "変数 $v が残っている"; exit 1; fi
         done
     '

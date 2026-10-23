@@ -54,8 +54,10 @@ if __zshrc_has fnm; then
     eval "$(fnm env --shell zsh)"
 fi
 
-## color
-export TERM=xterm-256color
+## color (端末が xterm と名乗るときだけ 256 色版にする。tmux・screen・dumb などの TERM は上書きしない)
+if [[ $TERM == xterm ]]; then
+    export TERM=xterm-256color
+fi
 
 ## emacs (emacsclient がある場合だけ)
 if __zshrc_has emacsclient; then
@@ -82,9 +84,7 @@ setopt hist_ignore_all_dups
 setopt hist_ignore_dups
 #スペースで始まる場合はヒストリに追加しない
 setopt hist_ignore_space
-# 履歴をインクリメンタルに追加
-setopt inc_append_history
-# zshプロセス間でヒストリを共有する
+# zshプロセス間でヒストリを共有する (実行のたびに追記する動作も含む)
 setopt share_history
 #移動履歴をプッシュ(cd -[Tab]
 setopt auto_pushd
@@ -114,22 +114,14 @@ fi
 ### プロンプト ##
 #################
 
-#黒赤緑黄青紫水白
-local GREEN=$'%{\e[1;32m%}'
-local BLUE=$'%{\e[1;34m%}'
-local DEFAULT=$'%{\e[1;m%}'
-    #%n     ユーザー名
-    #%M     コンピュータ名
-    #%c     カレントディレクトリ
-#通常
-PROMPT=$DEFAULT"%n@%M:"$BLUE"%c"$DEFAULT"$ "
+#通常 (%n ユーザー名、%M ホスト名、%1~ カレントディレクトリ名。ディレクトリ名は太字の青)
+PROMPT='%n@%M:%B%F{blue}%1~%f%b$ '
 #複数行
 PROMPT2="%_$ "
 #確認
 SPROMPT="%r is correct? [n,y,a,e]: "
-#右プロンプト
-    #%*     時間
-RPROMPT=$DEFAULT"["$GREEN"%*"$DEFAULT"]"
+#右プロンプト (%* 時刻。太字の緑)
+RPROMPT='[%B%F{green}%*%f%b]'
 #出力の文字列末尾に改行コードが無い場合でも表示
 unsetopt promptcr
 #タイトル (ディレクトリ名[フルパス]。タイトルを扱えない端末以外)
@@ -243,8 +235,8 @@ fi
 ## nkf (nkf がある場合だけ)
 # ファイルを指定の文字コードで上書き
 if __zshrc_has nkf; then
-    alias nkfutf8="nkf -w --overwrite "
-    alias nkfsjis="nkf -s --overwrite "
+    alias nkfutf8="nkf -w --overwrite"
+    alias nkfsjis="nkf -s --overwrite"
 fi
 
 ## g++ (g++ がある場合だけ。gna・gojt は競プロ用で、gojt は oj も要る)
@@ -312,11 +304,9 @@ alias mv='mv -i'
 #cp
 alias cp="cp -i"    #上書きを確認
 #rm
-if __zshrc_has trash-put; then
-    alias rm="trash-put"
-fi
 alias rm='rm -v'
-alias rmtmp='rm -v *~ #*#'
+#バックアップ (*~) と Emacs の自動保存ファイル (#*#) を削除する (無い側は無視する。~ と # はコメントの影響を受けないようエスケープ)
+alias rmtmp='rm -v -- *\~(N) \#*\#(N)'
 
 #ln
 alias ln="ln -i -v"
@@ -359,19 +349,20 @@ fi
 alias s="ls"
 alias l="ls"
 alias ks="ls"
+alias sl="ls"
+alias LS="ls"
 alias lsa="la"
 alias cd..="cd .."
-##sl
-alias -g sl="ls"
-alias -g LS="ls"
 
 
 ####################
 ### キーバインド ###
 ####################
-# HOME
+# Home / End (アプリケーションモードと通常モードの両方)
 bindkey '^[OH' beginning-of-line
 bindkey '^[OF' end-of-line
+bindkey '^[[H' beginning-of-line
+bindkey '^[[F' end-of-line
 # Delete
 bindkey '^[[3~' delete-char
 
@@ -402,13 +393,16 @@ if (( ! $+functions[compdef] || $+__zshrc_loaded )); then
     compinit
 fi
 __zshrc_loaded=1
+#git の alias に git の補完を割り当てる (complete_aliases が有効なので alias 名ごとに指定する)
+compdef _git gts=git-status gtd=git-diff gta=git-add gtc=git-commit gtm=git-merge gtp=git-push gtl=git-log gtco=git-checkout
 #補完関数をできるだけ過剰に
 zstyle ':completion:*' verbose yes
 zstyle ':completion:*:descriptions' format '%B%d%b'
 zstyle ':completion:*:messages' format '%d'
 zstyle ':completion:*:warnings' format 'No matches for: %d'
 zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-]#)*=01;34=0=01'
-zstyle ':completion:*:*:*:*:processes' command "ps -u `whoami` -o pid,user,comm -w -w"
+#プロセス ID の補完 (kill など) では自分のプロセスだけを出す ($EUID は補完の実行時に展開する)
+zstyle ':completion:*:*:*:*:processes' command 'ps -u $EUID -o pid,user,comm -w -w'
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*:cd:*' tag-order local-directories directory-stack path-directories
 #LS_COLORS を設定し、補完候補も ls と同じ色で表示する (dircolors がある場合だけ。-b: SHELL の値に関係なく sh 形式で出力させる)
@@ -443,7 +437,7 @@ setopt menu_complete
 setopt list_types
 #'='以降でも補完できるようにする( --prefix=/usr 等の場合)
 setopt magic_equal_subst
-#alias を展開せず、別のコマンドとして補完する (rm・ls など同名 alias のオプション補完をそのまま保つ)
+#alias を展開せず、別のコマンドとして補完する (rm・ls など同名 alias のオプション補完をそのまま保つ。git の alias は上の compdef で割り当てる)
 setopt complete_aliases
 #パラメータ名の補完で自動的に入った空白などを、次に } などを打ったときに消す
 setopt auto_param_keys
