@@ -75,7 +75,16 @@
 
 ## 検証と完了条件
 
-`_zshrc` を変更した場合は、リポジトリルートで次を実行し、
+`_zshrc` または `test/zshrc.bats` を変更した場合は、リポジトリルートで回帰テストを実行し、
+全件 `ok` になることを確認する（bats-core 1.5 以上。テストの内容は `test/zshrc.bats` を見る）。
+
+```sh
+bats test
+```
+
+テストは次の構文検査と起動検査に加え、規約のうち機械的に確かめられるもの（非対話シェルから
+source すると非端末ガードで止まること、常に定義する関数・alias、最終行の `typeset -U path PATH`、
+ユーザー名入りの絶対パスが無いこと）も検査する。`bats` が無い環境では次を手動で実行し、
 `rc=0` かつ stderr に出力がないことを確認する。
 
 ```sh
@@ -92,9 +101,9 @@ d=$(mktemp -d) && ln -s "$f" "$d/.zshrc" && test -r "$d/.zshrc" && ZDOTDIR="$d" 
 
 起動検査は `fnm`・`nvm`・`compinit` など実環境のツールを呼ぶため、
 警告が出た場合は今回の変更に起因するものかを切り分けて報告する。
-zsh 設定ファイルを含まない変更（`README.md`、`AGENTS.md`、`CLAUDE.md`、`.claude/`、`.codex/`、
+zsh 設定ファイルとテストを含まない変更（`README.md`、`AGENTS.md`、`CLAUDE.md`、`.claude/`、`.codex/`、
 `.gitignore` など）では、参照先とコマンドの実在、記述どうしの整合性を確認し、
-zsh の検査は要求しない。`.claude/settings.json` と `.codex/config.toml` を変更した場合は、
+`bats test` は要求しない。`.claude/settings.json` と `.codex/config.toml` を変更した場合は、
 JSON と TOML として読み込めることも確認する
 （`jq . .claude/settings.json`、`python3 -c 'import tomllib; tomllib.load(open(".codex/config.toml", "rb"))'`）。
 
