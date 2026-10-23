@@ -29,8 +29,9 @@ allowed-tools: Bash, Read, Grep, Glob, Agent, Write, EnterPlanMode, ExitPlanMode
    追加の分析は具体的な未解決事項がある場合に絞り、同じ指摘の反復を避ける。
 4. 計画へ目的・完了条件・対象外・制約・実装ステップ・検証・リスクをまとめる。
    各ステップに変更ファイル、内容、検証方法、完了基準を記す。
-   検証は「検証と完了条件」から選ぶ（`_zshrc` なら構文検査と起動検査、文書なら参照・整合性検査、
-   `.claude/settings.json`・`.codex/config.toml` なら JSON・TOML の読み込み検査）。
+   検証は「検証と完了条件」から選ぶ（`_zshrc`・`test/zshrc.bats` なら `bats test`、文書なら
+   参照・整合性検査、`.claude/settings.json`・`.codex/config.toml` なら JSON・TOML の読み込み検査）。
+   規約を変える変更では `test/zshrc.bats` の追従も計画に含める。
    不明事項を推測で埋めず、実装を妨げるものと実装中に確認できるものを区別する。
 
 計画ファイルの冒頭に、実際の値で次を付ける。

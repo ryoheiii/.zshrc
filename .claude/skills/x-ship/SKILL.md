@@ -58,8 +58,9 @@ git rev-list master..HEAD --oneline
 
 「検証と完了条件」に従い、変更範囲に対応する検査を実行する:
 
-- `_zshrc` を含む変更: 構文検査 `zsh -n _zshrc` と、一時ディレクトリを `ZDOTDIR` にした起動検査
-  （どちらも worktree のファイルに対して実行する）。README.md の該当箇所が追従しているかも確認する。
+- `_zshrc` または `test/zshrc.bats` を含む変更: worktree のルートで `bats test` を実行し、全件 `ok` を
+  確認する（`bats` が無ければ「検証と完了条件」の手動の構文検査・起動検査で代える）。
+  README.md の該当箇所が追従しているかも確認する。
 - 文書・エージェント設定だけの変更: 参照先とコマンドの実在、記述どうしの整合性。
   `.claude/settings.json` は `jq .`、`.codex/config.toml` は `tomllib` で読み込めることも確認する。
 
