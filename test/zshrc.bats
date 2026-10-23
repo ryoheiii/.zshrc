@@ -113,10 +113,15 @@ setup() {
 }
 
 @test "rmtmp はバックアップと Emacs の自動保存ファイルだけを消す" {
-    mkdir -p "$BATS_TEST_TMPDIR/rmtmp" "$BATS_TEST_TMPDIR/empty"
-    touch "$BATS_TEST_TMPDIR/rmtmp/a~" "$BATS_TEST_TMPDIR/rmtmp/#b#" "$BATS_TEST_TMPDIR/rmtmp/-x~" "$BATS_TEST_TMPDIR/rmtmp/c"
-    run -0 zsh -i -c 'cd "$ZDOTDIR/rmtmp" && rmtmp >/dev/null && ls -A'
-    [ "$output" = "c" ]
+    mkdir -p "$BATS_TEST_TMPDIR/both" "$BATS_TEST_TMPDIR/only-backup" "$BATS_TEST_TMPDIR/only-autosave" "$BATS_TEST_TMPDIR/empty"
+    touch "$BATS_TEST_TMPDIR/both/a~" "$BATS_TEST_TMPDIR/both/#b#" "$BATS_TEST_TMPDIR/both/-x~" "$BATS_TEST_TMPDIR/both/c"
+    touch "$BATS_TEST_TMPDIR/only-backup/a~" "$BATS_TEST_TMPDIR/only-backup/c"
+    touch "$BATS_TEST_TMPDIR/only-autosave/#b#" "$BATS_TEST_TMPDIR/only-autosave/c"
+    # 両方あるとき、片方しか無いとき (旧 alias は *~ が無いと no matches found で止まった) のどれでも対象だけを消し、c は残す
+    for d in both only-backup only-autosave; do
+        run -0 zsh -i -c "cd \"\$ZDOTDIR/$d\" && rmtmp >/dev/null && ls -A"
+        [ "$output" = "c" ]
+    done
     # 対象が無いときは rm が missing operand で失敗する (旧 alias の no matches found と同じく終了状態 1)
     run -1 zsh -i -c 'cd "$ZDOTDIR/empty" && rmtmp 2>/dev/null'
 }
