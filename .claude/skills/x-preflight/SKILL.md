@@ -15,7 +15,8 @@ allowed-tools: Bash, Read, Grep, Glob
   （作業中の `_zshrc` など）はユーザーのものとして触れない。
 - 新規タスクでは `git fetch origin` 後、`origin/master` から専用 worktree とブランチを作る。
   メインチェックアウトを切り替えず、他セッションのブランチを更新しない。
-  Claude Code は EnterWorktree（`.claude/worktrees/<name>` に作成）を使う。
+  Claude Code は EnterWorktree（`.claude/worktrees/<name>` に作成）を使う。そのセッション内では
+  `git -C` や `$(git …)` を含む複合コマンドが拒否されるため、Git の確認は単純なコマンドを並べて行う。
   Codex は `git worktree add .claude/worktrees/<name> -b <type>/<name> origin/master`
   （`<type>` は `feat` / `fix` / `docs` / `chore` など）で作る。
 - 既に今回のタスク用 worktree にいる場合は、ブランチとベースを確認して再利用する。

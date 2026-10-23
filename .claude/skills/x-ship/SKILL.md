@@ -24,25 +24,29 @@ push → 後片付けまでを一気通貫で行う。
 - メインチェックアウト（`~/.zshrc` の symlink 先）にあるユーザーの未コミット変更は保持する。
   マージはそれらのファイルに触れない場合だけ進める。
 - 各ステップは独立したシェルで実行されるため、変数はステップ内で解決する。
-- このリポジトリに CI はない。push 後はリモートの `master` がマージコミットと一致することで確認する。
+- Claude Code の EnterWorktree セッション内では、worktree 隔離のため `git -C` や `$(git …)` を含む
+  複合コマンドが拒否される。Step 4 までは worktree 内で行い、final レビューの verdict を得たら
+  ExitWorktree（`keep`）でメインチェックアウトのセッションへ戻り、承認記録の作成と Step 5 以降の
+  各 bash ブロックは先頭に `cd <TASK_WORKTREE> &&` を付けて実行する。Codex は worktree 内でそのまま実行する。
+- このリポジトリに CI はない。push 後はリモートの `master` がマージ後のローカル `master` と一致することで確認する。
 
 ## 手順
 
 ### 1. 開始判定
 
+worktree 内で実行できる単純なコマンドだけを使う。
+
 ```bash
-BRANCH="$(git branch --show-current)"
-case "$BRANCH" in master|'') echo "停止: タスク worktree のブランチで実行する"; exit 2;; esac
-SHIP_STATE="$(git rev-parse --absolute-git-dir)/ship-state"
-if [ -r "$SHIP_STATE" ]; then echo "ship-state あり（Step 6 まで完了済み）:"; cat "$SHIP_STATE"; fi
+git branch --show-current
 git status --porcelain
 git rev-list master..HEAD --oneline
+git rev-parse --absolute-git-dir
 ```
 
-- master 上なら停止する。
-- `ship-state` がある → 前回の Step 6 でマージ済み（push 失敗後の再実行など）。clean で、
-  `MERGE_SHA` が `git rev-parse master` と一致することを確認して Step 7 から再開する。
-  一致しなければ停止して報告する。
+- ブランチが master または空なら停止する（タスク worktree のブランチで実行する）。
+- 最後に表示した Git 管理ディレクトリに `ship-state` があれば（`ls` で確認）、前回の Step 6 で
+  マージ済み（push 失敗後の再実行など）。clean で、その `MERGE_SHA` が `git rev-parse master` と
+  一致することを確認して Step 7 から再開する。一致しなければ停止して報告する。
 - dirty（未コミット変更あり）→ Step 2 へ。
 - clean かつ master から ahead のコミットあり → Step 2 をスキップして Step 4 へ（resume）。
 - clean かつ ahead なし → 「ship 対象がありません」と報告して停止する。
@@ -190,9 +194,9 @@ git branch -d "$TASK_BRANCH"
 
 - タスクブランチは push しない運用なので、リモートブランチの削除は行わない。手動で push していた
   場合は、未マージのコミットがないことを確認したうえでユーザーの指示で削除する。
-- Claude Code で EnterWorktree により入った worktree では、`git merge-base --is-ancestor` までを
-  確認したあと、上のスクリプトの残りの代わりに ExitWorktree（`remove`）で worktree と
-  ブランチを削除する（セッションの作業ディレクトリが消えるため）。
+- Claude Code では「前提とルール」のとおり ExitWorktree（`keep`）で戻った後に、このスクリプトを
+  `cd <TASK_WORKTREE> &&` 付きで実行する。ExitWorktree（`remove`）は使わない
+  （ship-state を読む前に worktree が消えるため）。
 - `-D` は使わない。削除が拒否されたら原因を確認して報告する。
 - 承認記録と ship 状態は worktree の Git 管理ディレクトリにあり、worktree と一緒に消える。
 
