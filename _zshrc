@@ -19,6 +19,54 @@
 
 
 ################
+### 環境変数 ###
+################
+## コマンドがあるか調べる (以降のガードで使う。PATH 上の実行ファイルだけを見て、alias・関数は数えない)
+# WSL の Windows 側の PATH (/mnt/c など) は探さない。探すと無いコマンド 1 つにつき 0.1 秒前後かかる
+# 判定は起動時の 1 回だけなので、後から入れたツールは新しいシェル (か zns) で有効になる
+function __zshrc_has() {
+    local d
+    for d in ${path:#/mnt/[a-z]/*}; do
+        [[ -f $d/$1 && -x $d/$1 ]] && return 0
+    done
+    return 1
+}
+
+## PATH の重複を除く (以降の代入のたびに効き、重複したパスは最初に出てきた位置に残る。-g: 関数の中から source されても局所変数にしない)
+typeset -gU path PATH
+
+## 日本語utf-8
+export LANG=ja_JP.UTF-8
+
+### .local 関連
+## 実行バイナリパス
+export PATH="$HOME/.local/bin:$PATH"
+
+### カスタムインストール先
+## 標準でない場所に入れたツールの PATH はここにまとめる (ディレクトリがある場合だけ足す。非対話ガードより前に置く)
+# fnm (Node.js のバージョン管理)。Linux 用の公式インストーラーの既定の導入先
+if [ -d "$HOME/.local/share/fnm" ]; then
+    export PATH="$HOME/.local/share/fnm:$PATH"
+fi
+
+## fnm がある場合だけ設定する (--shell zsh: シェルの推定に ps を使わせない)
+if __zshrc_has fnm; then
+    eval "$(fnm env --shell zsh)"
+fi
+
+## color
+export TERM=xterm-256color
+
+## emacs (emacsclient がある場合だけ)
+if __zshrc_has emacsclient; then
+    export EDITOR="emacsclient -nw -a ''"
+fi
+
+### 非対話シェルならここで終了 (エージェントのシェルスナップショットなどから source された場合。以降は対話シェル専用) ###
+[[ -o interactive ]] || return 0
+
+
+################
 ### 基本設定 ###
 ################
 
@@ -50,6 +98,10 @@ setopt hist_expire_dups_first
 setopt hist_no_store
 # 余分な空白は詰めて記録
 setopt hist_reduce_blanks
+#自動cd(cdなしでおｋ
+setopt auto_cd
+#コマンド修正提示 (ファイル名まで考慮)
+setopt correct_all
 # 対話入力でも # 以降をコメントとして扱う
 setopt INTERACTIVE_COMMENTS
 #command not foundの時にはインストール方法を提示
@@ -57,50 +109,6 @@ if [ -f "/etc/zsh_command_not_found" ]; then
     source /etc/zsh_command_not_found
 fi
 
-
-################
-### 環境変数 ###
-################
-## コマンドがあるか調べる (以降のガードで使う。PATH 上の実行ファイルだけを見て、alias・関数は数えない)
-# WSL の Windows 側の PATH (/mnt/c など) は探さない。探すと無いコマンド 1 つにつき 0.1 秒前後かかる
-# 判定は起動時の 1 回だけなので、後から入れたツールは新しいシェル (か zns) で有効になる
-function __zshrc_has() {
-    local d
-    for d in ${path:#/mnt/[a-z]/*}; do
-        [[ -f $d/$1 && -x $d/$1 ]] && return 0
-    done
-    return 1
-}
-
-## 日本語utf-8
-export LANG=ja_JP.UTF-8
-
-### .local 関連
-## 実行バイナリパス
-export PATH="$HOME/.local/bin:$PATH"
-
-### カスタムインストール先
-## 標準でない場所に入れたツールの PATH はここにまとめる (ディレクトリがある場合だけ足す。非端末ガードより前に置く)
-# fnm (Node.js のバージョン管理)。Linux 用の公式インストーラーの既定の導入先
-if [ -d "$HOME/.local/share/fnm" ]; then
-    export PATH="$HOME/.local/share/fnm:$PATH"
-fi
-
-## fnm がある場合だけ設定する (--shell zsh: シェルの推定に ps を使わせない)
-if __zshrc_has fnm; then
-    eval "$(fnm env --shell zsh)"
-fi
-
-## color
-export TERM=xterm-256color
-
-## emacs (emacsclient がある場合だけ)
-if __zshrc_has emacsclient; then
-    export EDITOR="emacsclient -nw -a ''"
-fi
-
-### 非端末プロセスなら終了 ###
-[ $#PROMPT -eq 0 -o $#TERM -eq 0 ] && return
 
 #################
 ### プロンプト ##
@@ -122,23 +130,19 @@ SPROMPT="%r is correct? [n,y,a,e]: "
 #右プロンプト
     #%*     時間
 RPROMPT=$DEFAULT"["$GREEN"%*"$DEFAULT"]"
-#タイトル
-case "${TERM}" in
-kterm*|xterm*)
-    precmd() {
-        echo -ne "\033]0;`basename ${PWD}`[${PWD}]\007"
-    }
+#出力の文字列末尾に改行コードが無い場合でも表示
+unsetopt promptcr
+#タイトル (ディレクトリ名[フルパス]。タイトルを扱えない端末以外)
+case ${TERM} in
+dumb|linux|eterm*|'')
     ;;
-esac
-#補完候補にもlsと同じ色付き表示
-
-case ${OSTYPE} in
-  linux*)  # ここに Linux 向けの設定
-    # dircolors がある場合だけ (-b: SHELL の値に関係なく sh 形式で出力させる)
-    if __zshrc_has dircolors; then
-        eval `dircolors -b`
-        zstyle ':completion:*:default' list-colors ${LS_COLORS}
-    fi
+*)
+    # ${PWD:t} は / で空になるので、basename と同じく / を出す
+    function __zshrc_title() {
+        printf '\e]0;%s[%s]\a' "${${PWD:t}:-/}" "$PWD"
+    }
+    autoload -Uz add-zsh-hook
+    add-zsh-hook precmd __zshrc_title
     ;;
 esac
 
@@ -154,14 +158,15 @@ WORDCHARS=${WORDCHARS:s,/,,}
 ############
 ### 関数 ###
 ############
-# 上方向へcdする
+# 上方向へcdする (カレントを含めて上へたどり、指定した名前を持つ最も近いディレクトリへ移動する)
 function up() {
-    to=$(perl -le '$p=$ENV{PWD}."/";$d="/".$ARGV[0]."/";$r=rindex($p,$d);$r>=0 && print substr($p, 0, $r+length($d))' $1)
-    if [ "$to" = "" ]; then
+    local p="$PWD/" to
+    to=${p%"/$1/"*}
+    if [[ $to == "$p" ]]; then
         echo "no such file or directory: $1" 1>&2
         return 1
     fi
-    cd $to
+    cd -- "$to/$1"
 }
 
 # 上へ移動する
@@ -180,6 +185,7 @@ function cdback() {
 # nautilusでフォルダ開く (nautilus がある場合だけ)
 if __zshrc_has nautilus; then
     function naop() {
+        local d
         if [ "$#" = "0" ]; then
             nautilus .
         else
@@ -190,6 +196,20 @@ if __zshrc_has nautilus; then
             done
         fi
     }
+fi
+
+## emacs (emacs がある場合だけ。alias 節の erestart が使う)
+if __zshrc_has emacs; then
+    function estart() {
+      if ! emacsclient -e 0 > /dev/null 2>&1; then
+        ({
+          cd
+          emacs --daemon
+          cd -
+        } > /dev/null 2>&1 & )
+      fi
+    }
+    # estart # シェル起動時にEmacsデーモンも起動する
 fi
 
 
@@ -209,12 +229,15 @@ alias gtp="git push"
 alias gtl="git log"
 alias gtco="git checkout"
 
-## emacs (emacs がある場合だけ。erestart が使う estart も「その他」節で同じ条件にしている)
+## emacs (emacs がある場合だけ。erestart が使う estart は関数節で同じ条件にしている)
 if __zshrc_has emacs; then
     alias ekill="emacsclient -e '(kill-emacs)'"
     alias erestart="ekill && estart"
     alias ecli="emacsclient -nw -a ''"
     alias e="emacs -nw"
+    #打ち間違い対策
+    alias emasc="emacs"
+    alias em="emacs"
 fi
 
 ## nkf (nkf がある場合だけ)
@@ -224,18 +247,14 @@ if __zshrc_has nkf; then
     alias nkfsjis="nkf -s --overwrite "
 fi
 
-## g++関連 (g++ がある場合だけ)
+## g++ (g++ がある場合だけ。gna・gojt は競プロ用で、gojt は oj も要る)
 if __zshrc_has g++; then
     alias g="g++"
     alias a="./a.out"
     alias g++11="g++ -std=c++11"
-fi
-
-## Programming Contest (g++ がある場合だけ。gojt は oj も要る)
-if __zshrc_has g++; then
-    alias gna="g++ main.cpp && ./a.out" # g++ and a.out
+    alias gna="g++ main.cpp && ./a.out"
     if __zshrc_has oj; then
-        alias gojt="g++ main.cpp && oj t"    # g++ and oj t
+        alias gojt="g++ main.cpp && oj t"
     fi
 fi
 
@@ -342,10 +361,6 @@ alias l="ls"
 alias ks="ls"
 alias lsa="la"
 alias cd..="cd .."
-if __zshrc_has emacs; then
-    alias emasc="emacs"
-    alias em="emacs"
-fi
 ##sl
 alias -g sl="ls"
 alias -g LS="ls"
@@ -380,8 +395,13 @@ bindkey -s "^['" "'^A '^A"
 ##################
 
 #コマンドラインオプションも補完
-autoload -U compinit
-compinit
+# Ubuntu では /etc/zsh/zshrc が同じ dump (~/.zcompdump) で compinit 済み (compdef が定義済み) なので、起動時は再実行しない
+# (補完関数の検査に約 0.1 秒かかる)。zns で読み直したとき (__zshrc_loaded が設定済み) は従来どおり実行し、後から入れた補完関数を拾う
+if (( ! $+functions[compdef] || $+__zshrc_loaded )); then
+    autoload -Uz compinit
+    compinit
+fi
+__zshrc_loaded=1
 #補完関数をできるだけ過剰に
 zstyle ':completion:*' verbose yes
 zstyle ':completion:*:descriptions' format '%B%d%b'
@@ -391,25 +411,28 @@ zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-
 zstyle ':completion:*:*:*:*:processes' command "ps -u `whoami` -o pid,user,comm -w -w"
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*:cd:*' tag-order local-directories directory-stack path-directories
-#ホスト名補完の候補 (known_hosts、/etc/hosts、自ホスト名、localhost)
-[ -r ~/.ssh/known_hosts ] && _ssh_hosts=(${${${${(f)"$(<$HOME/.ssh/known_hosts)"}:#[\|]*}%%\ *}%%,*}) || _ssh_hosts=()
-[ -r /etc/hosts ] && : ${(A)_etc_hosts:=${(s: :)${(ps:\t:)${${(f)~~"$(</etc/hosts)"}%%\#*}##[:blank:]#[^[:blank:]]#}}} || _etc_hosts=()
-hosts=(
-    "$_ssh_hosts[@]"
-    "$_etc_hosts[@]"
+#LS_COLORS を設定し、補完候補も ls と同じ色で表示する (dircolors がある場合だけ。-b: SHELL の値に関係なく sh 形式で出力させる)
+if __zshrc_has dircolors; then
+    eval "$(dircolors -b)"
+    zstyle ':completion:*:default' list-colors ${LS_COLORS}
+fi
+#ホスト名補完の候補を ~/.ssh/known_hosts (ハッシュ化された行を除く)・/etc/hosts・自ホスト名・localhost から作る
+# (無名関数の local に閉じ、グローバル変数を残さない。extended_glob が無効なので /etc/hosts の IP も候補に残る)
+() {
+    local -a ssh_hosts etc_hosts
+    if [ -r ~/.ssh/known_hosts ]; then
+        ssh_hosts=(${${${${(f)"$(<$HOME/.ssh/known_hosts)"}:#[\|]*}%%\ *}%%,*})
+    fi
+    if [ -r /etc/hosts ]; then
+        : ${(A)etc_hosts:=${(s: :)${(ps:\t:)${${(f)~~"$(</etc/hosts)"}%%\#*}##[:blank:]#[^[:blank:]]#}}}
+    fi
     # 自ホスト名は hostname コマンドではなく zsh の $HOST を使う (hostname が無い環境でもエラーにしない。環境変数 HOST が無ければ同じ値)
-    $HOST
-    localhost
-)
-zstyle ':completion:*:hosts' hosts $hosts
+    zstyle ':completion:*:hosts' hosts $ssh_hosts $etc_hosts $HOST localhost
+}
 #補完の時に大文字小文字を区別しない(但し、大文字を打った場合は小文字に変換しない)
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
 #矢印キー補完選択
 zstyle ':completion:*:default' menu select
-#自動cd(cdなしでおｋ
-setopt auto_cd
-#コマンド修正提示 (ファイル名まで考慮)
-setopt correct_all
 #補完候補が複数ある時に、一覧表示する
 setopt auto_list
 #タブキー連打で補完候補を順に表示
@@ -426,30 +449,15 @@ setopt complete_aliases
 setopt auto_param_keys
 #末尾の/を消去しない
 setopt noautoremoveslash
-#出力の文字列末尾に改行コードが無い場合でも表示
-unsetopt promptcr
 
 
 ############
 ## その他 ##
 ############
 
-## emacs (emacs がある場合だけ。alias 節の erestart が使う)
-if __zshrc_has emacs; then
-    function estart() {
-      if ! emacsclient -e 0 > /dev/null 2>&1; then
-        ({
-          cd
-          emacs --daemon
-          cd -
-        } > /dev/null 2>&1 & )
-      fi
-    }
-    # estart # シェル起動時にEmacsデーモンも起動する
-fi
-
 ### WSL
 # WSL のときだけ設定する (wsl.exe から起動したシェルは WSL_DISTRO_NAME を持つ。ssh などで持たないときはカーネル名で判定する)
+# 非対話で source する呼び出し元の umask・LC_ALL を上書きしないよう、意図して非対話ガードより後に置く
 if [[ -n $WSL_DISTRO_NAME || ( -r /proc/sys/kernel/osrelease && "$(</proc/sys/kernel/osrelease)" == *[Mm]icrosoft* ) ]]; then
     umask 022
 
@@ -462,13 +470,3 @@ if [[ -n $WSL_DISTRO_NAME || ( -r /proc/sys/kernel/osrelease && "$(</proc/sys/ke
         export XAUTHORITY="$HOME/.Xauthority"
     fi
 fi
-
-## nvm (~/.nvm/nvm.sh がある場合だけ。bash_completion は compinit を使うので補完ルール節より後に置く)
-if [ -s "$HOME/.nvm/nvm.sh" ]; then
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-fi
-
-# PATH の重複を除く (重複したパスは最初に出てきた位置に残る)
-typeset -U path PATH

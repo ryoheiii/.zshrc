@@ -16,20 +16,44 @@ setup() {
 }
 
 @test "対話シェルとして起動すると最後まで読み込まれ、stderr に出力がない" {
-    # 非端末ガードより後にある alias (zns) が定義されていれば、ガードを越えて読まれたと判定する
+    # 非対話ガードより後にある alias (zns) が定義されていれば、ガードを越えて読まれたと判定する
     run -0 --separate-stderr zsh -i -c 'alias zns'
     [ -z "$stderr" ]
 }
 
-@test "非対話シェルから source すると非端末ガードで止まり、エラーも出ない" {
-    # Claude Code や Codex のシェルスナップショットと同じ読み込み方。ガードより前の PATH は設定され、後の alias は定義されない
+@test "対話シェルで source し直しても終了状態 0 で、stderr に出力がない" {
+    # zns (zcompile ~/.zshrc && source ~/.zshrc) と同じ読み直し。最終行の文が偽で終わると source が失敗するので、その回帰も検出する
+    run -0 --separate-stderr zsh -i -c 'source "$ZDOTDIR/.zshrc"'
+    [ -z "$stderr" ]
+}
+
+@test "非対話シェルから source すると非対話ガードで止まり、終了状態 0 でエラーも出ない" {
+    # Claude Code や Codex のシェルスナップショットと同じ読み込み方。ガードより前の PATH は設定され、後の alias・setopt・関数は定義されない
     run -0 --separate-stderr zsh -c "
-        source '$ZSHRC'
+        source '$ZSHRC' || { print \"source の終了状態が \$?\"; exit 1; }
         if alias zns >/dev/null; then print 'ガードより後の alias zns が定義された'; exit 1; fi
+        if [[ -o autopushd ]]; then print 'ガードより後の setopt auto_pushd が有効になった'; exit 1; fi
+        if (( \$+functions[command_not_found_handler] )); then print 'ガードより後の command-not-found が読まれた'; exit 1; fi
+        if [[ -n \$(print -l -- \$path | sort | uniq -d) ]]; then print 'PATH に重複がある'; exit 1; fi
         print -r -- \"\$PATH\"
     "
     [ -z "$stderr" ]
     [[ ":$output:" == *":$HOME/.local/bin:"* ]]
+}
+
+@test "PS1 が export された環境から非対話で source しても非対話ガードで止まる" {
+    # 旧ガードは PROMPT の長さで判定していたので、PS1 を export した親から起動されると止まらなかった
+    run -0 --separate-stderr env PS1=x zsh -c "
+        source '$ZSHRC' || exit 1
+        if alias zns >/dev/null; then print 'ガードより後の alias zns が定義された'; exit 1; fi
+    "
+    [ -z "$stderr" ]
+}
+
+@test "グローバル rc を読まない起動でも補完が初期化される" {
+    # Ubuntu 以外 (/etc/zsh/zshrc が compinit を実行しない環境) と同じ経路。自前の compinit が走る
+    run -0 --separate-stderr zsh -d -i -c '(( $+functions[compdef] )) || { print "compdef がない"; exit 1; }'
+    [ -z "$stderr" ]
 }
 
 @test "常に定義する関数と alias がそろっている" {
@@ -47,8 +71,39 @@ setup() {
     '
 }
 
-@test "最終行が typeset -U path PATH のままである" {
-    [ "$(tail -n 1 "$ZSHRC")" = "typeset -U path PATH" ]
+@test "typeset -gU path PATH は最初の PATH の変更と非対話ガードより前にある" {
+    typeset_line=$(grep -n '^typeset -gU path PATH$' "$ZSHRC" | cut -d: -f1)
+    first_path_line=$(grep -n 'PATH=' "$ZSHRC" | head -n 1 | cut -d: -f1)
+    guard_line=$(grep -n '^\[\[ -o interactive \]\] || return 0$' "$ZSHRC" | cut -d: -f1)
+    [ -n "$typeset_line" ] && [ -n "$first_path_line" ] && [ -n "$guard_line" ]
+    [ "$typeset_line" -lt "$first_path_line" ] && [ "$typeset_line" -lt "$guard_line" ]
+}
+
+@test "対話シェルに作業用のグローバル変数を残さない" {
+    # ホスト名補完の作業用配列と、up のローカル変数
+    run -0 zsh -i -c '
+        for v in hosts _etc_hosts _ssh_hosts to; do
+            if (( $+parameters[$v] )); then print "変数 $v が残っている"; exit 1; fi
+        done
+    '
+}
+
+@test "up はカレントを含めて上へたどり、見つからなければ失敗する" {
+    mkdir -p "$BATS_TEST_TMPDIR/a/src/foo/src/bar"
+    run -0 zsh -i -c '
+        cd "$ZDOTDIR/a/src/foo/src/bar"
+        up src; [[ $PWD == "$ZDOTDIR/a/src/foo/src" ]] || { print "up src: $PWD"; exit 1; }
+        cd "$ZDOTDIR/a/src/foo/src/bar"
+        up foo; [[ $PWD == "$ZDOTDIR/a/src/foo" ]] || { print "up foo: $PWD"; exit 1; }
+        cd "$ZDOTDIR/a/src/foo/src/bar"
+        up bar; [[ $PWD == "$ZDOTDIR/a/src/foo/src/bar" ]] || { print "up bar: $PWD"; exit 1; }
+        cd /usr/share
+        up usr; [[ $PWD == /usr ]] || { print "up usr: $PWD"; exit 1; }
+        if (( $+parameters[to] )); then print "変数 to が残っている"; exit 1; fi
+    '
+    run -1 --separate-stderr zsh -i -c 'cd /; up nope'
+    [ "$stderr" = "no such file or directory: nope" ]
+    [ -z "$output" ]
 }
 
 @test "ユーザー名を含む絶対パスが無い" {
