@@ -41,7 +41,7 @@ allowed-tools: Bash, Read, Write, Grep, Glob
 `VERDICT: APPROVED` または `VERDICT: REVISE` と指定する。
 
 対象に関係する規約を参照させる。`_zshrc` の変更では [AGENTS.md](../../../AGENTS.md) の
-「zsh 設定の規約」（節の配置、日本語コメント、非端末ガードの前後、`__zshrc_has` と
+「zsh 設定の規約」（節の配置、日本語コメント、非対話ガードの前後、`__zshrc_has` と
 `if … fi` によるガード、`$HOME` 表記、依存する定義、README.md の追従）と、
 「検証と完了条件」の回帰テスト（`bats test`）の結果を確認させる。
 エージェント設定・文書の変更では参照先の実在と文書間の整合性を確認させる。

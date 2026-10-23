@@ -31,7 +31,7 @@ allowed-tools: Bash, Read, Grep, Glob
 - 文書・指示だけの変更では、参照先と検証に使うツールの確認で足りる。
 - `_zshrc` または `test/zshrc.bats` の変更では `zsh --version` と `bats --version`（1.5 以上）を確認し、
   worktree のルートで `bats test` を実行して変更前のベースラインを取得する。`bats` が無ければ
-  「検証と完了条件」の手動の構文検査・起動検査で代える。起動検査は `fnm`・`nvm`・`compinit` など
+  「検証と完了条件」の手動の構文検査・起動検査で代える。起動検査は `fnm`・`compinit` など
   実環境のツールを呼ぶため、変更前から出る警告は記録しておき、変更後の切り分けに使う。
 - Codex レビューを使う予定なら `codex --version` と `timeout` の有無を確認する。
   同じ状態で取得済みの結果を再取得する必要はない。
