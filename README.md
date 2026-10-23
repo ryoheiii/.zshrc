@@ -15,7 +15,7 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 
 | ファイル | 役割 |
 |---|---|
-| `_zshrc` | 設定本体 (482 行)。`~/.zshrc` からリンクして使う。環境やツールに依存する設定はガードで囲み、該当しない環境では何もしない |
+| `_zshrc` | 設定本体 (490 行)。`~/.zshrc` からリンクして使う。環境やツールに依存する設定はガードで囲み、該当しない環境では何もしない |
 | `README.md` | このファイル |
 | `AGENTS.md` / `CLAUDE.md` / `.claude/` / `.codex/` | AI エージェント向けの変更規約と設定 ([エージェント向け](#エージェント向け)) |
 | `.gitignore` | `*.zwc`、`.zcompdump*`、`/README.html` (mdh で README を変換した HTML)、Claude Code のローカル設定 (`CLAUDE.local.md`、`.claude/settings.local.json`、`.claude/hookify.*.local.md`、`.claude/worktrees/`) を除外 |
@@ -35,7 +35,7 @@ zsh の設定ファイル (`.zshrc`) を管理するリポジトリ。汎用の 
 | fnm | `eval "$(fnm env --shell zsh)"` |
 | emacsclient | `EDITOR="emacsclient -nw -a ''"` |
 | emacs | `e` `ecli` `ekill` `erestart` `em` `emasc`、関数 `estart`、拡張子 alias (`.c` `.C` `.cpp` `.h` `.java` `.txt` `.xml`) |
-| nkf / g++ / gtags / apt | `nkfutf8` `nkfsjis` / `g` `a` `g++11` `gna` (`gojt` は oj もある場合) / `gtags-table` `gtags-clear` `rmgtags` / `apt*` |
+| nkf / g++ / gtags / apt | `nkfutf8` `nkfsjis` / `g` `a` `g++11` `gna` (`gojt` は oj もある場合) / `gtags-clear` `rmgtags` (`gtags-table` は ctags プラグイン用の ctags もある場合) / `apt*` |
 | nautilus / zipinfo / xsel / firefox (Linux 版) | 関数 `naop` / `.zip` の拡張子 alias / `toclip` 系のグローバル alias / `.html` `.pdf` `.xhtml` の拡張子 alias |
 | trash-put | `rm` を `trash-put` に (ただし直後の `rm -v` で上書きされるので効かない。[注意点](#動作に影響するもの)) |
 | gnome-open があり、`go` コマンドが無い | `go` → `gnome-open` |
@@ -81,7 +81,7 @@ perl (`up`)、git、sudo (`poweroff` `reboot`)、coreutils (`basename`、`whoami
 | sudo / apt | `poweroff` `reboot` (sudo。ガードせず常に定義する)、`apt*` (apt がある場合) |
 | nkf | `nkfutf8` `nkfsjis` |
 | g++、online-judge-tools (`oj`) | `g` `a` `g++11` `gna` (g++)。`gojt` は oj もある場合だけ |
-| GNU GLOBAL (`gtags`) と Exuberant Ctags (`/usr/bin/ctags-exuberant`。gtags.conf の `exuberant-ctags` ラベルがこのパスを直接呼ぶ) | `gtags-table` `gtags-clear` `rmgtags`。`gtags-table` はこの機では使えない (下記) |
+| GNU GLOBAL (`gtags`)。`gtags-table` は Universal Ctags か Exuberant Ctags も (gtags.conf の `universal-ctags` / `exuberant-ctags` ラベルの `ctagscom` が指す実体。Debian 系では `/usr/bin/ctags-universal` / `/usr/bin/ctags-exuberant`) | `gtags-clear` `rmgtags`。`gtags-table` は起動時に `gtags --config=ctagscom` で実行できる ctags のラベルを選び (universal-ctags 優先)、どちらも無ければ定義しない |
 | fnm | 起動時の `PATH` (`~/.local/share/fnm`、`~/.local/bin` など) にあれば `eval "$(fnm env --shell zsh)"` を実行する ([Node.js](#nodejs)) |
 | nvm | `~/.nvm/nvm.sh` があれば末尾で読み込む |
 | trash-put | あれば `rm` を `trash-put` にするが、直後の `rm -v` で上書きされる ([注意点](#動作に影響するもの)) |
@@ -89,7 +89,7 @@ perl (`up`)、git、sudo (`poweroff` `reboot`)、coreutils (`basename`、`whoami
 
 2026-10 時点の WSL2 機には xsel・trash-put・nautilus・oj・gnome-open・Linux 版 firefox が無い (`command -v` で確認)。そのため toclip 系、`naop`、`gojt`、`go`、`.html` `.pdf` `.xhtml` の拡張子 alias (Linux 版の `firefox` を呼ぶ) は定義されない。trash-put は無くても影響しない ([注意点](#動作に影響するもの)の `rm` の項)。
 
-- `/usr/bin/ctags-exuberant` も無い (入っているのは universal-ctags だけ) ので、`gtags-table` は `gtags: cannot execute '/usr/bin/ctags-exuberant'` で失敗し、中途半端な `GPATH` `GRTAGS` `GTAGS` が残る。この機では `gtags --gtagslabel=universal-ctags` なら動く。
+- `/usr/bin/ctags-exuberant` も無い (入っているのは universal-ctags だけ) ので、`gtags-table` は `gtags --gtagslabel=universal-ctags` になる。
 
 ## 導入手順
 
@@ -280,7 +280,8 @@ user@hostname:dir$                                          [9:05:42]
 | `nkfutf8` / `nkfsjis` | nkf | `nkf -w --overwrite ` / `nkf -s --overwrite ` (ファイルを UTF-8 / Shift_JIS で上書き) |
 | `g` / `a` / `g++11` | g++ | `g++` / `./a.out` / `g++ -std=c++11` |
 | `gna` / `gojt` | g++ (`gojt` は oj も) | `g++ main.cpp && ./a.out` / `g++ main.cpp && oj t` (競プロ用) |
-| `gtags-table` / `gtags-clear` (`rmgtags`) | gtags | `gtags --gtagslabel=exuberant-ctags` / `rm -v GPATH GRTAGS GTAGS` |
+| `gtags-table` | gtags と、gtags.conf の `universal-ctags` か `exuberant-ctags` ラベルが指す ctags | `gtags --gtagslabel=universal-ctags` (universal-ctags の実体が無く exuberant-ctags があれば `--gtagslabel=exuberant-ctags`)。ラベルは起動時に選ぶ |
+| `gtags-clear` (`rmgtags`) | gtags | `rm -v GPATH GRTAGS GTAGS` |
 | `aptupd` `aptupg` `aptrem` `aptcle` `aptins` | apt | `sudo apt` の `update` `upgrade` `autoremove` `autoclean` `install` |
 | `go` | gnome-open があり、`go` コマンドが無い | `gnome-open` |
 

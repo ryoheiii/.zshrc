@@ -247,7 +247,15 @@ fi
 
 ## gtags (gtags がある場合だけ。gtags-clear と rmgtags は同じコマンド)
 if __zshrc_has gtags; then
-    alias gtags-table="gtags --gtagslabel=exuberant-ctags"
+    # gtags-table の ctags プラグインのラベルは、gtags.conf の ctagscom (ctags の実体のパス) が実行できるものを
+    # universal-ctags → exuberant-ctags の順に選ぶ (Debian 系では /usr/bin/ctags-universal / ctags-exuberant)。どちらも無ければ定義しない
+    for __zshrc_label in universal-ctags exuberant-ctags; do
+        if [ -x "$(gtags --gtagslabel=$__zshrc_label --config=ctagscom 2>/dev/null)" ]; then
+            alias gtags-table="gtags --gtagslabel=$__zshrc_label"
+            break
+        fi
+    done
+    unset __zshrc_label
     alias gtags-clear="rm -v GPATH GRTAGS GTAGS"
     alias rmgtags='rm -v GPATH GRTAGS GTAGS'
 fi
