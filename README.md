@@ -154,7 +154,7 @@ bats ~/.config/zsh/test       # 回帰テスト (push 前に実行する)
 zns                           # = zcompile ~/.zshrc && source ~/.zshrc
 ```
 
-- テストは `test/zshrc.bats` にあり、[bats-core](https://github.com/bats-core/bats-core) 1.5 以上で動く (Ubuntu なら `sudo apt install bats`)。[AGENTS.md](AGENTS.md) の構文検査・起動検査 (対話シェルで最後まで読まれ、stderr に出力がない) に加えて、次を確かめる (全 15 件): 対話シェルで source し直しても終了状態 0 であること、非対話シェルから source すると (`PS1` を export した環境からでも) 非対話ガードで止まり、終了状態 0 で `PATH` に重複が無いこと、グローバル rc を読まない起動 (`zsh -d`) でも補完が初期化されること、常に定義する関数・alias がそろっていること (`sl` `LS` がグローバル alias でないことも)、git の alias に git の補完が割り当てられていること、Home / End が通常モードのシーケンスにも割り当てられていること、`TERM` の昇格と端末タイトルのフックの有無、`rmtmp` が消すファイル、`typeset -gU path PATH` が最初の `PATH` の変更と非対話ガードより前にあること、作業用のグローバル変数を残さないこと、`up` の移動先と失敗時の動作、ユーザー名入りの絶対パスが無いこと。`~/.zshrc` は差し替えず、一時ディレクトリを `ZDOTDIR` にして作業中の `_zshrc` を読ませる。
+- テストは `test/zshrc.bats` にあり、[bats-core](https://github.com/bats-core/bats-core) 1.5 以上で動く (Ubuntu なら `sudo apt install bats`)。[AGENTS.md](AGENTS.md) の構文検査・起動検査 (対話シェルで最後まで読まれ、stderr に出力がない) に加えて、次を確かめる (全 16 件): 対話シェルで source し直しても終了状態 0 で、後から足した補完関数を拾うために `compinit` を再実行すること、非対話シェルから source すると (`PS1` を export した環境からでも) 非対話ガードで止まり、終了状態 0 で `~/.local/bin` が `PATH` に足され重複が無いこと、グローバル rc を読まない起動 (`zsh -d`) でも補完が初期化されること、常に定義する関数・alias がそろっていること (`sl` `LS` がグローバル alias でないことも)、git の alias に git の補完が割り当てられていること、Home / End が通常モードのシーケンスにも割り当てられていること、`TERM` の昇格と端末タイトルのフックの有無、`rmtmp` が消すファイル、`typeset -gU path PATH` が最初の `PATH` の変更と非対話ガードより前にあること、作業用のグローバル変数を残さないこと、`up` の移動先と失敗時の動作、ユーザー名入りの絶対パスが無いこと。`~/.zshrc` は差し替えず、一時ディレクトリを `ZDOTDIR` にして作業中の `_zshrc` を読ませる。
 - `zcompile ~/.zshrc` の出力 `~/.zshrc.zwc` はリンクと同じ `$HOME` にでき、リポジトリ内にはできない。作られたファイルは読み取り専用 (`-r--r--r--`)。
 - zsh は `.zwc` が元ファイルと同じか新しいときだけ `.zwc` を使い、古ければ元ファイルを読む。`zns` を忘れても次に起動したシェルには編集内容が反映される (その間 `.zwc` は使われない)。
 - 今のシェルで `source` し直しても、一度定義した alias・関数・setopt は残る。定義を消したときは新しいシェルで確かめる。
@@ -338,8 +338,9 @@ env -i HOME="$HOME" TERM=xterm SHELL="$(command -v zsh)" zsh -i -c 'print -l $pa
   - vi キーマップになると、Ctrl+A / Ctrl+E など emacs の既定キーは使えない (この rc の bindkey は main キーマップ、つまり viins に入る)。
   - 確実に emacs にするなら、キーバインド節の先頭 (ほかの `bindkey` より前) に `bindkey -e` を書く。
 - **`TERM` は `xterm` のときだけ `xterm-256color` に上げる** (_zshrc:57-60): tmux (既定は `tmux-256color`)・screen・dumb などの `TERM` は上書きしない。普段の Windows Terminal や VS Code のターミナル (`xterm-256color`) では変化がない。
-  - Emacs の `M-x shell` (`TERM=dumb`) では、端末タイトルのエスケープシーケンスが出ない代わりに、`ls`・git・grep の色やプロンプトの太字も出ない。Emacs 側で `comint-terminfo-terminal` を設定すれば戻せる。
-  - tmux の中から ssh すると、接続先にも `tmux-256color` が渡る。
+  - Emacs の `M-x shell` (`TERM=dumb`) では、端末タイトルのエスケープシーケンスが出ない代わりに、`ls`・git・grep の色やプロンプトの太字も出ない。`RPROMPT` の時刻も描かれず、直前のコマンドが戻さなかった文字属性はプロンプトに残る。Emacs 側で `comint-terminfo-terminal` を設定すれば戻せる。
+  - 以前は上書きで隠れていた `TERM` 側の問題が表に出る。terminfo の無い `TERM` (kitty や ghostty から ssh で入ったときの `xterm-kitty` `xterm-ghostty` など) では `unknown terminal type` が出る (対処は接続先に terminfo を入れる。kitty なら `kitten ssh`)。GNU screen の既定 (`TERM=screen`) では 8 色になる (`~/.screenrc` に `term screen-256color` を書く)。
+  - tmux の中から ssh すると、接続先にも `tmux-256color` が渡る (接続先に terminfo が無ければ同じエラーになる)。
 - **改行で終わらない出力の直後は表示がずれる** (`unsetopt promptcr`、_zshrc:126): `printf foo` のように改行で終わらない出力の直後は、その続きにプロンプトが出る。zle はプロンプトを行頭から描いた前提で位置を計算するため、`RPROMPT` が右端で次の行へ折り返し、入力は次の行の先頭から始まる。長い行の編集でも表示が崩れる。Ctrl+L で再描画するか改行すれば直る。既定の `prompt_cr` と `prompt_sp` に戻す (`unsetopt promptcr` の行を消す) と、改行の無い出力の末尾に反転した `%` が付き、プロンプトは次の行に出る (`PROMPT_EOL_MARK=''` で記号を消せる)。
 - **グローバル alias の副作用**: `G` `L` `H` `T` `S` `W` `X` (xsel がある場合は `toclip` 系も) は引数の位置でも展開される。`echo X` は `echo | xargs` になる。文字どおり渡したいときはクォートする。`sl` `LS` は通常の alias なので、`echo sl` や `git sl` で `ls` に化けることはない。
 - **Ubuntu では `compinit` を `/etc/zsh/zshrc` 側で実行する**: Ubuntu の `/etc/zsh/zshrc` (109-112 行目) が先に `compinit` を実行するので、rc 側は起動時に再実行しない (`compdef` が定義済みかで判定する。`zns` で読み直したときは実行する。_zshrc:391-395)。`~/.zshenv` に `skip_global_compinit=1` を書くと、`/etc/zsh/zshrc` は `compinit` を省き、rc 側が実行する。
