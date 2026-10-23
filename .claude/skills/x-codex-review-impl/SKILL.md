@@ -15,7 +15,8 @@ allowed-tools: Bash, Read, Write, Grep, Glob
 - `final`: x-ship 用のブランチ全体のレビュー。
   この場合だけ [最終承認の契約](references/final-approval.md) を先に読み、既存の承認記録を
   失効させてから、clean tree とレビューした HEAD に結びつく承認記録を扱う。
-  step はこのゲートの代わりにならない。
+  step はこのゲートの代わりにならない。Claude Code で EnterWorktree の worktree にいる場合は、
+  final を始める前に ExitWorktree（`keep`）で戻り、以降の手順を `cd <worktree> &&` 付きで実行する。
 
 ## レビュー材料
 

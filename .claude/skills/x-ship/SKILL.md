@@ -25,9 +25,10 @@ push → 後片付けまでを一気通貫で行う。
   マージはそれらのファイルに触れない場合だけ進める。
 - 各ステップは独立したシェルで実行されるため、変数はステップ内で解決する。
 - Claude Code の EnterWorktree セッション内では、worktree 隔離のため `git -C` や `$(git …)` を含む
-  複合コマンドが拒否される。Step 4 までは worktree 内で行い、final レビューの verdict を得たら
-  ExitWorktree（`keep`）でメインチェックアウトのセッションへ戻り、承認記録の作成と Step 5 以降の
-  各 bash ブロックは先頭に `cd <TASK_WORKTREE> &&` を付けて実行する。Codex は worktree 内でそのまま実行する。
+  複合コマンドが拒否される。Step 4 までは worktree 内で行い、final レビューを始める前に
+  ExitWorktree（`keep`）でメインチェックアウトのセッションへ戻る。以降の final レビュー
+  （既存の承認記録の失効を含む）、承認記録の作成、Step 5 以降の各 bash ブロックは、先頭に
+  `cd <TASK_WORKTREE> &&` を付けて実行する。Codex は worktree 内でそのまま実行する。
 - このリポジトリに CI はない。push 後はリモートの `master` がマージ後のローカル `master` と一致することで確認する。
 
 ## 手順

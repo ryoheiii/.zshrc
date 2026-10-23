@@ -35,8 +35,9 @@ Claude Code が共有設定へ権限を自動追加した場合は、コミッ�
 `/x-codex-review-impl final` → `/x-ship` の順で使う。明示されたとき、または依頼に必要なときだけ使い、
 すべての編集へ自動適用しない。Codex レビューのラッパーは `run_in_background: true` で起動して
 完了通知を待つ。EnterWorktree のセッション内では `git -C` や `$(git …)` を含む複合コマンドが
-拒否されるため、承認記録の作成と x-ship の Step 5 以降は、x-ship の「前提とルール」のとおり
-ExitWorktree（`keep`）後にメインチェックアウトのセッションから実行する。
+拒否されるため、`/x-codex-review-impl final` 以降（承認記録の失効・作成、x-ship の Step 5 以降）は、
+x-ship の「前提とルール」のとおり ExitWorktree（`keep`）後にメインチェックアウトのセッションから
+`cd <worktree> &&` 付きで実行する。
 
 ## レビューコマンド
 
