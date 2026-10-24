@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# 設定のリンクを作成し、uninstall 時に導入前の設定を復元する。
+# Oh My Zsh と入力支援を導入し、設定の退避・復元・明示的な更新をまとめる。
 set -euo pipefail
 
 usage() {
-    printf '使い方: bash setup.sh {install|uninstall}\n'
+    printf '使い方: bash setup.sh {install|update|uninstall}\n'
 }
 
 fail() {
@@ -17,9 +17,11 @@ exists() {
 
 case ${1:-} in
     -h|--help) usage; exit 0 ;;
-    install|uninstall) [[ $# == 1 ]] || { usage >&2; exit 1; } ;;
+    install|update|uninstall) [[ $# == 1 ]] || { usage >&2; exit 1; } ;;
     *) usage >&2; exit 1 ;;
 esac
+
+action=$1
 
 # ZDOTDIR に別の設定がある環境では、使われないリンクを作らない。
 [[ -n ${HOME:-} && $HOME == /* && -d $HOME ]] || fail 'HOME が有効な絶対パスではありません。'
@@ -34,19 +36,88 @@ is_installed() {
     [[ -L $rc && $(readlink -- "$rc") == "$source_file" ]]
 }
 
+# 公式リポジトリを導入する。更新はローカル変更を保持し、fast-forward に限定する。
+sync_repo() {
+    local directory=$1 url=$2
+    if exists "$directory"; then
+        [[ ! -L $directory && -d $directory/.git ]] || fail "$directory は通常の Git checkout ではありません。"
+        [[ $(git -C "$directory" config --get remote.origin.url) == "$url" ]] || fail "$directory の origin が公式 URL と異なります。"
+        if [[ $action == update ]]; then
+            [[ -z $(git -C "$directory" status --porcelain) ]] || fail "$directory に未コミット変更があります。"
+            git -C "$directory" pull --ff-only
+        fi
+    else
+        git clone --depth 1 "$url" "$directory"
+    fi
+}
+
+# 起動時には取得せず、セットアップ時だけ公式の導入手順を実行する。
+install_tools() (
+    for tool in git curl tar gzip zsh; do
+        command -v "$tool" >/dev/null 2>&1 || fail "先に $tool をインストールしてください。"
+    done
+    sync_repo "$HOME/.oh-my-zsh" https://github.com/ohmyzsh/ohmyzsh.git
+    # 入力支援の同梱前の checkout なら、明示的な update を案内する。
+    for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+        [[ -f $HOME/.oh-my-zsh/plugins/$plugin/$plugin.plugin.zsh ]] ||
+            fail "Oh My Zsh が古いため、bash setup.sh update を実行してください。"
+    done
+    sync_repo "$HOME/.fzf" https://github.com/junegunn/fzf.git
+    bash "$HOME/.fzf/install" --bin
+
+    mkdir -p "$HOME/.local/bin"
+    local staging version
+    staging=$(mktemp -d "$HOME/.local/bin/.zsh-tools.XXXXXX")
+    trap 'rm -rf -- "$staging"' EXIT
+    for tool in starship zoxide; do
+        if [[ $action == install && -x $HOME/.local/bin/$tool ]]; then
+            continue
+        fi
+        [[ ! -L $HOME/.local/bin/$tool && ! -d $HOME/.local/bin/$tool ]] ||
+            fail "$HOME/.local/bin/$tool がリンクまたはディレクトリのため上書きしません。"
+        if [[ $tool == starship ]]; then
+            curl -fsSL https://starship.rs/install.sh -o "$staging/install.sh"
+            if ! sh "$staging/install.sh" --yes --bin-dir "$staging" > "$staging/install.log" 2>&1; then
+                cat "$staging/install.log" >&2
+                exit 1
+            fi
+        else
+            curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh -o "$staging/install.sh"
+            if ! sh "$staging/install.sh" --bin-dir "$staging" --man-dir "$HOME/.local/share/man" --sudo '' > "$staging/install.log" 2>&1; then
+                cat "$staging/install.log" >&2
+                exit 1
+            fi
+        fi
+        # 正常に実行できるバイナリだけを配置する。
+        version=$("$staging/$tool" --version)
+        printf '%s\n' "${version%%$'\n'*}"
+        mv -f -- "$staging/$tool" "$HOME/.local/bin/$tool"
+    done
+)
+
 # ディレクトリの削除・上書きを防ぐ。ディレクトリを指すリンク自体は退避できる。
 for file in "$rc" "$compiled"; do
     [[ ! -d $file || -L $file ]] || fail "$file はディレクトリです。"
 done
 
-if [[ $1 == install ]]; then
+if [[ $action == update ]]; then
+    install_tools
+    printf 'ツールを更新しました。設定ファイルへの追記は不要です。exec zsh で起動し直してください。\n'
+    exit 0
+fi
+
+if [[ $action == install ]]; then
     command -v zsh >/dev/null 2>&1 || fail '先に zsh をインストールしてください。'
     zsh -n "$source_file"
     if is_installed && [[ -d $backup && ! -L $backup ]]; then
-        printf '導入済みです: %s\n' "$rc"
+        install_tools
+        printf '導入済みです: %s\n設定ファイルへの追記は不要です。\n' "$rc"
         exit 0
     fi
     exists "$backup" && fail "$backup が既にあります。退避内容を確認してください。"
+
+    # 依存ツールを揃えてから設定を切り替える。取得失敗時は元の設定を保持する。
+    install_tools
 
     # 途中で失敗した場合は、退避できたファイルを元へ戻す。
     rollback() {
@@ -64,7 +135,7 @@ if [[ $1 == install ]]; then
     if exists "$compiled"; then mv -- "$compiled" "$backup/.zshrc.zwc"; fi
     ln -s -- "$source_file" "$rc"
     trap - ERR
-    printf '導入しました。退避先: %s\n新しい zsh を起動してください。\n' "$backup"
+    printf '導入しました。退避先: %s\n設定ファイルへの追記は不要です。exec zsh で起動し直してください。\n' "$backup"
 else
     # 別の設定へ差し替えられていたら、触らずに止まる。
     [[ -d $backup && ! -L $backup ]] || fail 'このスクリプトによる退避先がありません。'

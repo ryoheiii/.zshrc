@@ -1,22 +1,41 @@
 # 追加ツールの導入
 
-必要な機能だけ導入してください。追加・削除した後は、新しい zsh を起動します。
-以下は Ubuntu / WSL 向けです。
+Ubuntu / WSL 向けの手順です。追加後は `exec zsh` で起動し直します。
+設定ファイルへの追記やプラグインマネージャーは不要です。
 
-| 機能 | インストール方法 | 主なコマンド |
+## 基本ツール
+
+```sh
+bash setup.sh install
+```
+
+| ツール | 用途 | 導入先 |
 |---|---|---|
-| Emacs | `sudo apt install emacs` | `e`、`ecli`、`estart` |
-| 文字コード変換 | `sudo apt install nkf` | `nkfutf8`、`nkfsjis` |
-| C++ | `sudo apt install g++` | `g`、`gna` |
-| ソースコードの索引 | `sudo apt install global universal-ctags` | `gtags-table` |
-| クリップボード | `sudo apt install xsel` | `toclip`、`andclip` |
-| ZIP の内容表示 | `sudo apt install unzip` | ZIP ファイル名で実行 |
-| ファイルマネージャー | `sudo apt install nautilus` | `naop` |
-| ブラウザー | `sudo apt install firefox` | HTML・PDF ファイル名で実行 |
+| Oh My Zsh | 補完・履歴・キー操作・Git alias とプラグイン | `~/.oh-my-zsh` |
+| fzf | Ctrl+R で履歴、Ctrl+T でパス挿入、Alt+C で移動 | `~/.fzf` |
+| Starship | 現在地・Git・実行結果のプロンプト | `~/.local/bin/starship` |
+| zoxide | `z` / `zi` で訪問したディレクトリへ移動 | `~/.local/bin/zoxide` |
 
-GUI とクリップボードには WSLg などの X サーバーが必要です。Firefox は Linux 側のコマンドを使います。
-`emacsclient` があれば `EDITOR` も Emacs に設定されます。
-`gtags-table` は GNU GLOBAL の設定から利用可能な ctags を選びます。
+Oh My Zsh と fzf は公式リポジトリを clone します。fzf の `install --bin` はバイナリだけを取得します。
+Starship と zoxide は公式インストーラーを使います。zoxide のマニュアルは `~/.local/share/man` に入ります。
+入力候補の `zsh-autosuggestions` と構文色分けの `zsh-syntax-highlighting` は Oh My Zsh の同梱版です。
+追加の clone は不要です。不足しているツールは読み飛ばし、標準の補完・履歴検索を使えます。
+
+更新は `bash setup.sh update`、反映は `exec zsh` です。起動時にはネットワークへ接続しません。
+Oh My Zsh / fzf の更新は fast-forward に限定します。
+Starship / zoxide が導入先にあれば `install` では保持し、`update` で実行確認済みのバイナリへ置き換えます。
+導入先が symlink やディレクトリの場合、`update` は上書きせず停止します。
+アンインストールは設定だけを復元し、ツールを残します。
+
+## Emacs
+
+```sh
+sudo apt install emacs
+```
+
+`e` は `emacs -nw`、`ecli` は `emacsclient -nw -a ''` です。
+`ecli` は既存のデーモンへ接続し、なければ起動します。
+`emacsclient` があり `EDITOR` が未指定の場合だけ、`EDITOR` にも同じコマンドを設定します。
 
 ## Node.js（fnm）
 
@@ -40,15 +59,4 @@ fnm default lts-latest
 
 `--skip-shell` は必須です。省略するとリンク先の `_zshrc` へ設定が追記されます。
 `.node-version` による自動切り替えは設定していません。
-PATH は fnm の Node.js → `~/.local/share/fnm` → `~/.local/bin` → 元の PATH の順です。
-
-## 競技プログラミング（oj）
-
-`gojt` を使う場合だけ、g++ に加えて online-judge-tools を導入します。
-
-```sh
-sudo apt install g++ pipx
-pipx install online-judge-tools
-```
-
-`~/.local/bin` は設定本体で PATH に追加されます。
+PATH は fnm の Node.js → `~/.local/share/fnm` → `~/.fzf/bin` → `~/.local/bin` → 元の PATH の順です。

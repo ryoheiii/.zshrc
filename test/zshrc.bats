@@ -8,6 +8,8 @@ setup() {
     ZSHRC="$BATS_TEST_DIRNAME/../_zshrc"
     # ~/.zshrc を差し替えずに作業中の _zshrc を読ませる。compinit の .zcompdump もここにでき、テスト後に消える
     export ZDOTDIR="$BATS_TEST_TMPDIR"
+    export XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache"
+    export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
     ln -s "$ZSHRC" "$ZDOTDIR/.zshrc"
 }
 
@@ -22,7 +24,7 @@ setup() {
 }
 
 @test "対話シェルで source し直しても終了状態 0 で、stderr に出力がない" {
-    # zns (zcompile ~/.zshrc && source ~/.zshrc) と同じ読み直し。最終行の文が偽で終わると source が失敗するので、その回帰も検出する
+    # zns と同じ読み直し。最終行の文が偽で終わると source が失敗するので、その回帰も検出する
     run -0 --separate-stderr zsh -i -c 'source "$ZDOTDIR/.zshrc"'
     [ -z "$stderr" ]
 }
@@ -54,7 +56,7 @@ setup() {
 }
 
 @test "source し直すと compinit を再実行し、後から足した補完関数を拾う" {
-    # 起動時は /etc/zsh/zshrc の compinit を使い回すが、zns のような読み直し (__zshrc_loaded が設定済み) では再実行する
+    # Oh My Zsh の再読み込みで追加の補完関数も登録される
     mkdir -p "$BATS_TEST_TMPDIR/fn"
     printf '#compdef zshrcprobe\n_files\n' > "$BATS_TEST_TMPDIR/fn/_zshrcprobe"
     run -0 --separate-stderr zsh -i -c '
@@ -66,33 +68,36 @@ setup() {
 }
 
 @test "グローバル rc を読まない起動でも補完が初期化される" {
-    # Ubuntu 以外 (/etc/zsh/zshrc が compinit を実行しない環境) と同じ経路。自前の compinit が走る
+    # OS の設定に依存せず Oh My Zsh、未導入なら標準の compinit で初期化する
     run -0 --separate-stderr zsh -d -i -c '(( $+functions[compdef] )) || { print "compdef がない"; exit 1; }'
     [ -z "$stderr" ]
 }
 
-@test "常に定義する関数と alias がそろっている" {
+@test "基本の関数と alias を残し、引数や標準コマンドの意味を変える alias は置かない" {
     run -0 zsh -i -c '
-        for f in __zshrc_has up cdup cdback; do
+        for f in __zshrc_has up; do
             (( $+functions[$f] )) || { print "関数 $f がない"; exit 1; }
         done
-        for a in zns gts gtd gta gtc gtm gtp gtl gtco la ll lla mv cp rm ln rmtmp poweroff reboot s l ks sl LS lsa cd..; do
+        for a in zns gst gd ga gc gm gp gl gco la ll lla mv cp ln ..; do
             (( $+aliases[$a] )) || { print "alias $a がない"; exit 1; }
         done
-        # グローバル alias は引数の位置でも展開されるので、名前はクォートして渡す
-        for a in "G" "L" "H" "T" "S" "W" "X"; do
-            (( $+galiases[$a] )) || { print "グローバル alias $a がない"; exit 1; }
+        for a in rm poweroff reboot go rmtmp gtd gtc gtm gtp gtco; do
+            (( ! $+aliases[$a] )) || { print "alias $a が残っている"; exit 1; }
         done
-        # sl / LS は引数の位置で展開されないよう、通常の alias にしている
-        if (( $+galiases[sl] || $+galiases[LS] )); then print "sl / LS がグローバル alias になっている"; exit 1; fi
+        (( ${#galiases} == 0 && ${#saliases} == 0 ))
     '
 }
 
-@test "git の alias に git の補完が割り当てられている" {
+@test "git の alias は標準の alias 展開を通して補完し、候補選択を明示的に行う" {
     run -0 zsh -i -c '
-        for a in gts:git-status gtd:git-diff gta:git-add gtc:git-commit gtm:git-merge gtp:git-push gtl:git-log gtco:git-checkout; do
-            [[ ${_comps[${a%%:*}]} == _git && ${_services[${a%%:*}]} == ${a#*:} ]] || { print "$a: comps=${_comps[${a%%:*}]} services=${_services[${a%%:*}]}"; exit 1; }
-        done
+        [[ ! -o completealiases && ! -o menucomplete ]] || exit 1
+        [[ ${_comps[git]} == _git ]] || exit 1
+        [[ ${aliases[gst]} == "git status" && ${aliases[gco]} == "git checkout" ]] || exit 1
+        [[ ${aliases[gts]} == "git tag --sign" ]] || exit 1
+        [[ ${aliases[gta]} == "git tag --annotate" ]] || exit 1
+        [[ ${aliases[gtl]} == *"git tag --sort=-v:refname"* ]] || exit 1
+        zstyle -a ":completion:*" menu reply
+        [[ $reply == select ]]
     '
 }
 
@@ -102,29 +107,19 @@ setup() {
     [ "${lines[1]}" = '"^[[F" end-of-line' ]
 }
 
-@test "TERM は xterm のときだけ xterm-256color に昇格し、端末タイトルは dumb などタイトルを扱えない端末以外で設定する" {
-    # precmd_functions が未定義 (フックを登録していない) なら添字 (I) は空になるので 0 に寄せる
-    run -0 env TERM=xterm zsh -i -c 'print -r -- "$TERM ${precmd_functions[(I)__zshrc_title]:-0}"'
-    [ "$output" = "xterm-256color 1" ]
-    run -0 env TERM=tmux-256color zsh -i -c 'print -r -- "$TERM ${precmd_functions[(I)__zshrc_title]:-0}"'
-    [ "$output" = "tmux-256color 1" ]
-    run -0 env TERM=dumb zsh -i -c 'print -r -- "$TERM ${precmd_functions[(I)__zshrc_title]:-0}"'
-    [ "$output" = "dumb 0" ]
+@test "OS や呼び出し元の TERM・ロケール・DISPLAY・umask を上書きしない" {
+    for terminal in xterm tmux-256color dumb; do
+        run -0 --separate-stderr env TERM="$terminal" LANG=C LC_ALL=C DISPLAY=localhost:10.0 WSL_DISTRO_NAME=probe \
+            zsh -d -f -i -c '
+                umask 077
+                source "$ZDOTDIR/.zshrc" || exit 1
+                print -r -- "$TERM|$LANG|$LC_ALL|$DISPLAY|$(umask)"
+            '
+        [ -z "$stderr" ]
+        [ "$output" = "$terminal|C|C|localhost:10.0|077" ]
+    done
 }
 
-@test "rmtmp はバックアップと Emacs の自動保存ファイルだけを消す" {
-    mkdir -p "$BATS_TEST_TMPDIR/both" "$BATS_TEST_TMPDIR/only-backup" "$BATS_TEST_TMPDIR/only-autosave" "$BATS_TEST_TMPDIR/empty"
-    touch "$BATS_TEST_TMPDIR/both/a~" "$BATS_TEST_TMPDIR/both/#b#" "$BATS_TEST_TMPDIR/both/-x~" "$BATS_TEST_TMPDIR/both/c"
-    touch "$BATS_TEST_TMPDIR/only-backup/a~" "$BATS_TEST_TMPDIR/only-backup/c"
-    touch "$BATS_TEST_TMPDIR/only-autosave/#b#" "$BATS_TEST_TMPDIR/only-autosave/c"
-    # 両方あるとき、片方しか無いとき (旧 alias は *~ が無いと no matches found で止まった) のどれでも対象だけを消し、c は残す
-    for d in both only-backup only-autosave; do
-        run -0 zsh -i -c "cd \"\$ZDOTDIR/$d\" && rmtmp >/dev/null && ls -A"
-        [ "$output" = "c" ]
-    done
-    # 対象が無いときは rm が missing operand で失敗する (旧 alias の no matches found と同じく終了状態 1)
-    run -1 zsh -i -c 'cd "$ZDOTDIR/empty" && rmtmp 2>/dev/null'
-}
 
 @test "typeset -gU path PATH は最初の PATH の変更と非対話ガードより前にある" {
     typeset_line=$(grep -n '^typeset -gU path PATH$' "$ZSHRC" | cut -d: -f1)
@@ -165,4 +160,102 @@ setup() {
 
 @test "ユーザー名を含む絶対パスが無い" {
     run -1 grep -nE '/(home|Users)/' "$ZSHRC"
+}
+
+@test "EDITOR が vi でも emacs 形式のキーと先頭一致の履歴検索を使える" {
+    run -0 --separate-stderr env EDITOR=vi zsh -d -i -c '
+        [[ $EDITOR == vi ]] || exit 1
+        bindkey "^A"
+        bindkey "^E"
+        bindkey "^[[A"
+        bindkey "^[[B"
+        bindkey "^R"
+    '
+    [ -z "$stderr" ]
+    [ "${lines[0]}" = '"^A" beginning-of-line' ]
+    [ "${lines[1]}" = '"^E" end-of-line' ]
+    [ "${lines[2]}" = '"^[[A" up-line-or-beginning-search' ]
+    [ "${lines[3]}" = '"^[[B" down-line-or-beginning-search' ]
+    [ "${lines[4]}" = '"^R" history-incremental-search-backward' ]
+}
+
+@test "履歴は保存件数に余裕を持たせ、重複を整理して履歴展開を確認できる" {
+    run -0 zsh -i -c '
+        (( HISTSIZE > SAVEHIST && SAVEHIST == 10000 )) || exit 1
+        [[ -o sharehistory && -o histignorespace && -o histverify ]] || exit 1
+        [[ -o histexpiredupsfirst && -o histfindnodups && -o histsavenodups ]] || exit 1
+        [[ ! -o correct && ! -o correctall ]]
+    '
+}
+
+@test "起動時の自動更新を無効にし、Oh My Zsh のテーマと独自 Git プロンプトを重ねない" {
+    run -0 --separate-stderr zsh -i -c '
+        zstyle -s ":omz:update" mode mode
+        [[ $mode == disabled && -z $ZSH_THEME ]] || exit 1
+        (( ! $+functions[__zshrc_vcs] )) || exit 1
+        [[ -o promptcr && -o promptsp ]]
+    '
+    [ -z "$stderr" ]
+}
+
+@test "繰り返し読み込んでもフックと PATH を重複させない" {
+    run -0 --separate-stderr zsh -i -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        source "$ZDOTDIR/.zshrc" || exit 1
+        unique_hooks=(${(u)precmd_functions})
+        (( ${#precmd_functions} == ${#unique_hooks} )) || exit 1
+        unique_hooks=(${(u)chpwd_functions})
+        (( ${#chpwd_functions} == ${#unique_hooks} )) || exit 1
+        unique_path=("${(@u)path}")
+        (( ${#path} == ${#unique_path} ))
+    '
+    [ -z "$stderr" ]
+}
+
+@test "非対話で source しても Oh My Zsh と画面用のツールは実行しない" {
+    mkdir -p "$BATS_TEST_TMPDIR/forbidden"
+    printf 'print -u2 読み込み禁止; return 1\n' > "$BATS_TEST_TMPDIR/forbidden/oh-my-zsh.sh"
+    run -0 --separate-stderr env ZSH="$BATS_TEST_TMPDIR/forbidden" zsh -c '
+        source "$ZDOTDIR/.zshrc"
+    '
+    [ -z "$stderr" ]
+    [ -z "$output" ]
+}
+
+@test "up は引数なしで親へ移動し、空文字や複数の名前を拒否する" {
+    mkdir -p "$BATS_TEST_TMPDIR/parent/child"
+    run -0 zsh -i -c '
+        cd "$ZDOTDIR/parent/child"
+        up
+        [[ $PWD == "$ZDOTDIR/parent" ]]
+    '
+    run -1 zsh -i -c 'up ""'
+    [ "$output" = '使い方: up [ディレクトリ名]' ]
+    run -1 zsh -i -c 'up a b'
+    [ "$output" = '使い方: up [ディレクトリ名]' ]
+    run -1 zsh -i -c 'up a/b'
+    [ "$output" = '使い方: up [ディレクトリ名]' ]
+}
+
+@test "zns は現在の ZDOTDIR から読み直し、コンパイルファイルを作らない" {
+    run -0 --separate-stderr zsh -i -c 'zns'
+    [ -z "$stderr" ]
+    [ ! -e "$ZDOTDIR/.zshrc.zwc" ]
+}
+
+@test "追加ツールのない環境でも標準機能で起動できる" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin" "$BATS_TEST_TMPDIR/empty-home"
+    # compdump の保存に必要な coreutils だけを PATH に残す。
+    ln -s /usr/bin/mv "$BATS_TEST_TMPDIR/bin/mv"
+    run -0 --separate-stderr zsh -d -f -i -c '
+        path=("$ZDOTDIR/bin")
+        HOME="$ZDOTDIR/empty-home"
+        ZSH="$HOME/.oh-my-zsh"
+        TERM=dumb
+        source "$ZDOTDIR/.zshrc" || exit 1
+        (( $+functions[compdef] && $+functions[up] )) || exit 1
+        (( ! $+functions[__zshrc_vcs] && ! $+functions[fzf-history-widget] )) || exit 1
+        (( ! $+aliases[ecli] ))
+    '
+    [ -z "$stderr" ]
 }

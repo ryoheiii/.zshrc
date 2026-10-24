@@ -1,75 +1,72 @@
 # 操作リファレンス
 
-## 移動・編集
+## 検索・編集・移動
 
 | 操作 | 動作 |
 |---|---|
-| `up <名前>` | カレント自身も含め、上位の最も近い同名ディレクトリへ移動 |
-| `cd -1` / `cd -<Tab>` | 直前のディレクトリへ / 移動履歴から選択 |
+| Tab / 候補表示中の矢印 | 標準補完 / メニューの候補選択 |
+| ↑ / ↓ | 入力中の先頭文字に一致する履歴を検索。複数行入力では行間を移動 |
+| Ctrl+R | fzf で履歴を絞り込む。選択したコマンドは編集してから Enter で実行 |
+| Ctrl+T | fzf でファイル・ディレクトリを選んでパスを挿入 |
+| Alt+C | fzf でディレクトリを選んで移動 |
+| 行末で → / End | 薄く表示された入力候補を採用 |
 | Ctrl+A / Ctrl+E、Home / End | 行頭 / 行末へ移動 |
 | Ctrl+← / Ctrl+→ | 単語単位で移動。パスは `/` ごとに区切る |
 | Ctrl+K / Ctrl+W | 行末まで / 直前の単語を削除 |
 | Ctrl+L | 画面を再描画 |
-| Esc h / Esc q / Esc ? | コマンドのヘルプ / 入力を一時退避 / コマンドの解決先を表示 |
-| `` Alt+` `` / Alt+' | 入力行をバッククォート / シングルクォートで囲む（カーソルが行末にある前提） |
+| Ctrl+X Ctrl+E | 入力中のコマンドをエディターで編集 |
+| `z <名前>` / `zi` | 訪問したディレクトリへ移動 / fzf で候補を選択 |
+| `up` / `..` | 親ディレクトリへ移動 |
+| `up <名前>` | カレント自身も含め、上位の最も近い同名ディレクトリへ移動 |
+| `cd -1` / `cd -<Tab>` | 直前のディレクトリへ / 移動履歴から選択 |
 
-emacs キーマップを前提にしています。必要なら `bindkey -e` で切り替えます。
-Alt+↑ と Alt+← はキー操作専用です。対応する `cdup` / `cdback` は直接実行しません。
-打ち間違いの修正確認では、`n` はそのまま実行、`y` は修正、`a` は中止、`e` は編集へ戻ります。
+fzf と入力候補・色分けは、対応ツールが導入されており、行編集できる端末の場合に有効です。
+fzf がなければ Ctrl+R は標準の履歴検索、Ctrl+T / Alt+C は emacs キーマップの標準動作になります。
+fzf の選択は Esc / Ctrl+C でキャンセルできます。入力候補は Enter だけでは採用されません。
+Alt 系のキーは端末側のショートカット設定にも依存します。
 
 ## 短縮コマンド
 
 | コマンド | 内容 |
 |---|---|
-| `gts` `gtd` `gta` `gtc` | `git status` / `diff` / `add` / `commit` |
-| `gtm` `gtp` `gtl` `gtco` | `git merge` / `push` / `log` / `checkout` |
-| `la` `ll` `lla` | `ls -a` / `ls -lh` / `ls -lha` |
-| `rmtmp` | カレントのバックアップ `*~` と Emacs 自動保存 `#*#` を削除 |
-| `aptupd` `aptupg` `aptins` | `sudo apt update` / `upgrade` / `install` |
-| `aptrem` `aptcle` | `sudo apt autoremove` / `autoclean` |
-| `poweroff` `reboot` | `sudo` 付きで電源断 / 再起動 |
+| `gst` `gd` `ga` `gc` | `git status` / `diff` / `add` / `commit --verbose` |
+| `gm` `gp` `gl` `gco` | `git merge` / `push` / `pull` / `checkout` |
+| `glog` | `git log --oneline --decorate --graph` |
+| `la` `ll` `lla` | 隠しファイルも表示 / 詳細一覧 / 隠しファイルも含む詳細一覧 |
+| `e` / `ecli` | ターミナル版 Emacs / emacsclient（各コマンドがある場合） |
+| `zns` | `${ZDOTDIR:-$HOME}/.zshrc` を再読み込み |
 
-Linux の `ls` は色・種別記号付きで、拡張子順に並べます。
-`cp`・`mv`・`ln` は上書きを確認し、`rm` は削除した名前を表示します。
-`rmtmp` は対象が無いとエラーになります。
-
-### グローバル alias
-
-| 単語 | 展開 |
-|---|---|
-| `G` `L` `H` `T` `S` `W` `X` | `\| grep` / `\| less` / `\| head` / `\| tail` / `\| sort` / `\| wc` / `\| xargs` |
-| `toclip` / `toclipall` | 標準出力 / 標準出力と標準エラーをクリップボードへ（xsel が必要） |
-| `andclip` / `andclipall` | 同じ内容をクリップボードと画面の両方へ（xsel が必要） |
-
-例: `ls G txt` は `ls | grep txt` になります。
-引数の位置でも展開されるため、文字として渡す場合は `echo 'X'` のようにクォートしてください。
-
-### ツールがある場合だけ使えるもの
-
-| コマンド | 内容 |
-|---|---|
-| `e` / `ecli` | ターミナル版 Emacs / emacsclient を起動 |
-| `estart` / `ekill` / `erestart` | Emacs デーモンの起動 / 終了 / 再起動 |
-| `nkfutf8 <file>` / `nkfsjis <file>` | UTF-8 / Shift_JIS に変換して上書き |
-| `g` / `g++11` / `a` | `g++` / C++11 指定 / `./a.out` |
-| `gna` / `gojt` | `main.cpp` をコンパイルして実行 / `oj t`（後者は oj も必要） |
-| `gtags-table` | ctags を利用して GNU GLOBAL の索引を作成 |
-| `gtags-clear` / `rmgtags` | `GPATH`・`GRTAGS`・`GTAGS` を削除 |
-| `naop [dir...]` | Nautilus で指定フォルダーを開く。省略時はカレント |
-| `go` | gnome-open があり、Go 言語の `go` が無い場合に gnome-open を実行 |
-
-ファイル名だけでも開けます。C/C++・Java・TXT・XML は Emacs、HTML・PDF・XHTML は Firefox、ZIP は zipinfo を使います。
-ツールの導入方法は[追加ツール](tools.md)へ。
+Linux の `ls` は色・種別記号付きで、標準の名前順に並べます。
+`la` と `lla` は `.` / `..` を省きます。
+`cp`・`mv`・`ln` は上書きを確認します。素のコマンドが必要なら `command cp` などを使います。
+Git の alias は Oh My Zsh の [git プラグイン](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/git)を使い、展開後のコマンドに補完が働きます。
 
 ## 設定と注意点
 
-- プロンプトは `user@hostname:dir$`、右側は表示時の時刻です。
-- 履歴は共有され、重複と先頭が空白の入力は保存しません。
-- WSL では `umask 022`、`DISPLAY=:0`、`LC_ALL=ja_JP.UTF-8` を設定します。WSLg を想定しています。
-- `TERM` は `xterm` の場合だけ `xterm-256color` にします。SSH 先で端末エラーが出る場合は、接続先に対応する terminfo が必要です。
-- 改行で終わらない出力の直後はプロンプトが崩れることがあります。Ctrl+L で再描画できます。
-- ハッシュ化された `known_hosts` のホスト名は SSH 補完に出ません。
-- `zns` は `~/.zshrc.zwc` を生成します。設定より古いコンパイル結果は起動時に無視されます。
-- 非対話シェルから明示的に source した場合も環境変数と PATH を設定します。`up` などの操作用関数・alias・キーバインドは対話シェル用です。
+- Starship は現在地、Git ブランチと変更状態、時間のかかったコマンドの実行時間を表示します。
+- コマンドが失敗すると終了コードと赤い記号を表示します。SSH 接続時はユーザーとホスト、root ではユーザーを表示します。
+- 履歴は `~/.zsh_history` に最大 10,000 件保存し、シェル間で共有します。重複を整理し、先頭が空白の入力は保存しません。
+- `!!` などの履歴展開は編集画面に戻してから実行します。ファイル名やコマンドの自動修正確認は出しません。
+- `LANG`・`LC_ALL`・`TERM`・`DISPLAY`・umask は呼び出し元から引き継ぎます。WSL の X 認証ファイルは未指定時だけ補います。
+- 改行で終わらない出力は zsh 標準の印で示し、プロンプトと重ならないようにします。
+- SSH 補完は zsh 標準の処理に任せます。ハッシュ化された `known_hosts` から元のホスト名は復元できません。
+- `zns` はコンパイルファイルを作りません。以前の `~/.zshrc.zwc` は設定本体より古ければ無視されます。
+- `zns` では Oh My Zsh と Starship を再初期化しません。プラグインやツールの変更後は `exec zsh` で起動し直します。
+- 非対話で明示的に source した場合は PATH と fnm、未指定の場合の EDITOR だけ設定し、補完や画面操作用の拡張は読み込みません。
 
-実装の細部は [_zshrc](../_zshrc) の日本語コメント、変更規約と検証方法は [AGENTS.md](../AGENTS.md) を参照してください。
+## 以前の設定からの変更
+
+今回の移行時は `exec zsh` で起動し直してください。`zns` だけでは削除した定義やオプションが旧シェルに残ります。
+
+引数まで置き換えるグローバル alias（`G` / `X` / `toclip` など）、拡張子による自動起動、
+打ち間違い用の alias、古いツール専用の短縮コマンド、入力行を引用符で囲む独自キーを削除しました。
+パイプは `| grep` や `| xsel -bi` と書き、ツールは `g++`・`nkf`・`gtags`・`nautilus` などを直接呼び出します。
+`poweroff`・`reboot` に自動で sudo を付ける設定も削除しました。
+Emacs の起動は `e` / `ecli` に集約し、`ecli` はデーモンがなければ起動します。
+端末タイトルの上書きと右側の時計も削除しました。
+Git の独自 alias `gts` / `gtd` などは Oh My Zsh の `gst` / `gd` などへ変更しました。
+以前の `gts` / `gta` / `gtl` は、それぞれ `gst` / `ga` / `glog` を使ってください。
+Oh My Zsh では `gts` は署名付きタグ、`gta` は注釈付きタグの作成、`gtl` はタグ一覧です。
+独自の Alt+矢印キーは削除し、移動は `up`・`cd -1`・`z` / `zi` を使います。
+
+実装は [_zshrc](../_zshrc)、変更規約と検証方法は [AGENTS.md](../AGENTS.md) を参照してください。

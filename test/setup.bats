@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 # 実際の HOME を変更せず、導入・復元と既存ファイルの保護を確認する。
 bats_require_minimum_version 1.5.0
+load setup-tools
 
 setup() {
     SETUP_SCRIPT="$BATS_TEST_DIRNAME/../setup.sh"
@@ -9,10 +10,15 @@ setup() {
     mkdir -p "$HOME"
     export ZDOTDIR="$HOME"
     BACKUP="$HOME/.zshrc.zsh-config-backup"
+    prepare_tools
 }
 
 @test "新規導入と uninstall で元の空の状態へ戻る" {
     run -0 bash "$SETUP_SCRIPT" install
+    [ -f "$HOME/.oh-my-zsh/oh-my-zsh.sh" ]
+    [ -x "$HOME/.fzf/bin/fzf" ]
+    [ -x "$HOME/.local/bin/starship" ]
+    [ -x "$HOME/.local/bin/zoxide" ]
     [ "$(readlink "$HOME/.zshrc")" = "$SOURCE_FILE" ]
     [ -d "$BACKUP" ]
     run -0 bash "$SETUP_SCRIPT" uninstall
@@ -38,6 +44,7 @@ setup() {
     printf '元の設定\n' > "$HOME/.zshrc"
     run -0 bash "$SETUP_SCRIPT" install
     run -0 bash "$SETUP_SCRIPT" install
+    [ "$(wc -l < "$TOOLS_DOWNLOAD_LOG")" -eq 2 ]
     [ "$(cat "$BACKUP/.zshrc")" = '元の設定' ]
     run -0 bash "$SETUP_SCRIPT" uninstall
     [ "$(cat "$HOME/.zshrc")" = '元の設定' ]
@@ -108,6 +115,12 @@ setup() {
 @test "最初の退避が失敗しても手動導入済みのリンクを削除しない" {
     ln -s "$SOURCE_FILE" "$HOME/.zshrc"
     printf '元のコンパイル結果\n' > "$HOME/.zshrc.zwc"
+    # バイナリ配置ではなく、設定の退避で mv が失敗するようにする。
+    mkdir -p "$HOME/.local/bin"
+    for tool in starship zoxide; do
+        printf '#!/bin/sh\nexit 0\n' > "$HOME/.local/bin/$tool"
+        chmod +x "$HOME/.local/bin/$tool"
+    done
     mkdir "$HOME/bin"
     printf '#!/bin/sh\nexit 1\n' > "$HOME/bin/mv"
     chmod +x "$HOME/bin/mv"
@@ -136,4 +149,51 @@ setup() {
     run -0 bash "$SETUP_SCRIPT" uninstall
     [ "$(cat "$HOME/保持するファイル")" = '保持するファイル' ]
     [ ! -L "$HOME/.zshrc.zwc" ]
+}
+
+@test "取得に失敗しても元の設定を保持し、再実行で導入できる" {
+    printf '元の設定\n' > "$HOME/.zshrc"
+    run -22 env FAIL_DOWNLOAD=1 bash "$SETUP_SCRIPT" install
+    [ "$(cat "$HOME/.zshrc")" = '元の設定' ]
+    [ ! -e "$BACKUP" ]
+    run -0 bash "$SETUP_SCRIPT" install
+    [ "$(cat "$BACKUP/.zshrc")" = '元の設定' ]
+}
+
+@test "update は公式配布元の変更を取り込み、設定の退避には触らない" {
+    printf '元の設定\n' > "$HOME/.zshrc"
+    run -0 bash "$SETUP_SCRIPT" install
+    local upstream="$BATS_TEST_TMPDIR/upstream/ohmyzsh/ohmyzsh.git"
+    printf '# 更新\n' > "$upstream/oh-my-zsh.sh"
+    git -C "$upstream" add -- oh-my-zsh.sh
+    git -C "$upstream" commit -qm 'テスト用の更新'
+    run -0 bash "$SETUP_SCRIPT" update
+    [ "$(cat "$HOME/.oh-my-zsh/oh-my-zsh.sh")" = '# 更新' ]
+    [ "$(cat "$BACKUP/.zshrc")" = '元の設定' ]
+    [ "$(wc -l < "$TOOLS_DOWNLOAD_LOG")" -eq 4 ]
+}
+
+@test "update は依存リポジトリの未コミット変更を保持して停止する" {
+    run -0 bash "$SETUP_SCRIPT" install
+    printf '# 手元の変更\n' > "$HOME/.oh-my-zsh/oh-my-zsh.sh"
+    run -1 bash "$SETUP_SCRIPT" update
+    [ "$(cat "$HOME/.oh-my-zsh/oh-my-zsh.sh")" = '# 手元の変更' ]
+    [ "$(wc -l < "$TOOLS_DOWNLOAD_LOG")" -eq 2 ]
+}
+
+@test "既存の導入先が別のリポジトリなら上書きしない" {
+    run -0 bash "$SETUP_SCRIPT" install
+    git -C "$HOME/.oh-my-zsh" remote set-url origin https://example.invalid/unrelated.git
+    run -1 bash "$SETUP_SCRIPT" install
+    [[ $output == *'origin が公式 URL と異なります'* ]]
+    [ "$(readlink "$HOME/.zshrc")" = "$SOURCE_FILE" ]
+}
+
+@test "update は別の場所を指すバイナリのリンク先へ書き込まない" {
+    run -0 bash "$SETUP_SCRIPT" install
+    mv "$HOME/.local/bin/starship" "$HOME/保持するツール"
+    ln -s "$HOME/保持するツール" "$HOME/.local/bin/starship"
+    run -1 bash "$SETUP_SCRIPT" update
+    [ -L "$HOME/.local/bin/starship" ]
+    [ "$("$HOME/保持するツール")" = 'starship test-version' ]
 }

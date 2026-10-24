@@ -1,0 +1,35 @@
+# 現在地・Git・実行結果に絞り、専用フォントなしで読めるプロンプトにする。
+format = "$username$hostname$directory$git_branch$git_status$cmd_duration$line_break$status$character"
+add_newline = false
+
+# SSH 接続時や root での操作は Starship 標準のユーザー表示を使う。
+[hostname]
+ssh_symbol = ""
+
+# 深い場所では末尾を表示し、Git のルート名も残す。
+[directory]
+truncation_length = 3
+read_only = " [read-only]"
+
+# ブランチ名の前の専用フォント記号を省く。
+[git_branch]
+symbol = ""
+
+# 差分の表示は Starship に任せ、通常の文字だけを使う。
+[git_status]
+ahead = ">"
+behind = "<"
+diverged = "<>"
+renamed = "r"
+deleted = "x"
+
+# 失敗したコマンドの終了コードを入力行の先頭に表示する。
+[status]
+disabled = false
+symbol = ""
+format = '[\[$status\]]($style) '
+
+# 入力位置を成功時は緑、失敗時は赤で示す。
+[character]
+success_symbol = "[>](bold green)"
+error_symbol = "[>](bold red)"
