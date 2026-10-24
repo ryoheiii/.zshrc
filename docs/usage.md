@@ -51,7 +51,7 @@ Git の alias は Oh My Zsh の [git プラグイン](https://github.com/ohmyzsh
 - 改行で終わらない出力は zsh 標準の印で示し、プロンプトと重ならないようにします。
 - SSH 補完は zsh 標準の処理に任せます。ハッシュ化された `known_hosts` から元のホスト名は復元できません。
 - `zns` はコンパイルファイルを作りません。以前の `~/.zshrc.zwc` は設定本体より古ければ無視されます。
-- `zns` では Oh My Zsh と Starship を再初期化しません。プラグインやツールの変更後は `exec zsh` で起動し直します。
+- `zns` では Oh My Zsh・補完・Starship を再初期化しません。補完・プラグイン・ツールの変更後は `exec zsh` で起動し直します。
 - 非対話で明示的に source した場合は PATH と fnm、未指定の場合の EDITOR だけ設定し、補完や画面操作用の拡張は読み込みません。
 
 ## 以前の設定からの変更

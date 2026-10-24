@@ -80,11 +80,9 @@ if [[ -o zle && -t 0 && -t 1 && $TERM != dumb ]]; then
     fi
 fi
 if [ -f "$ZSH/oh-my-zsh.sh" ]; then
-    # 再読み込みでフックや widget を重ねない。追加した補完だけは再走査する。
+    # 再読み込みでフックや widget を重ねず、動的に登録された補完を保持する。
     if (( ! $+functions[omz] )); then
         source "$ZSH/oh-my-zsh.sh"
-    else
-        compinit -i -d "$ZSH_COMPDUMP"
     fi
 else
     # 未導入でも静かに起動し、標準の補完と履歴を使えるようにする。

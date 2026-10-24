@@ -55,14 +55,15 @@ setup() {
     [ -z "$stderr" ]
 }
 
-@test "source し直すと compinit を再実行し、後から足した補完関数を拾う" {
-    # Oh My Zsh の再読み込みで追加の補完関数も登録される
-    mkdir -p "$BATS_TEST_TMPDIR/fn"
-    printf '#compdef zshrcprobe\n_files\n' > "$BATS_TEST_TMPDIR/fn/_zshrcprobe"
+@test "source し直しても動的に登録された補完を保持する" {
+    # Oh My Zsh の登録と、起動後に追加した登録の両方を保つ。
     run -0 --separate-stderr zsh -i -c '
-        fpath=("$ZDOTDIR/fn" $fpath)
+        [[ ${_comps[ggpnp]} == _git ]] || exit 1
+        compdef _files zshrcprobe
         source "$ZDOTDIR/.zshrc" || exit 1
-        [[ ${_comps[zshrcprobe]} == _zshrcprobe ]] || { print "読み直しで compinit が走っていない: ${_comps[zshrcprobe]:-(none)}"; exit 1; }
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ ${_comps[ggpnp]} == _git ]] || exit 1
+        [[ ${_comps[zshrcprobe]} == _files ]] || exit 1
     '
     [ -z "$stderr" ]
 }
