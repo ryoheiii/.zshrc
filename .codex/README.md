@@ -33,12 +33,21 @@ Claude Code も使うため、特定モデルだけを前提にした指示に�
 | [.codex/config.toml](config.toml) | 信頼済みチェックアウト向けの共有デフォルト（Git 管理） |
 | `~/.codex/config.toml` | マシン固有の trust 判断、writable roots、モデル設定（リポジトリ外） |
 
-[.codex/config.toml](config.toml) は現在コメントだけで、承認ポリシーとサンドボックスは
-`~/.codex/config.toml` と Codex の既定に従う。`.emacs.d` と `alpha-autopilot-ai` で有効な
-`approval_policy = "never"` / `sandbox_mode = "danger-full-access"` は、承認プロンプトと
-サンドボックス保護を無効化し、`.codex/` 自身への書き込みも防げない。
-この 2 値を有効化するかどうかと、その後の変更は、ユーザーが明示的に依頼した場合だけ行う。
-権限設定にかかわらず [AGENTS.md](../AGENTS.md) の安全規約を守る。
+[.codex/config.toml](config.toml) は、ユーザーの明示依頼により `alpha-autopilot-ai` と同じ
+`approval_policy = "never"` / `sandbox_mode = "danger-full-access"` を設定している。
+コマンドごとの承認プロンプトとファイル・ネットワークのサンドボックス制限を無効化するため、
+`.codex/` 自身への書き込みも許可される。権限設定にかかわらず
+[AGENTS.md](../AGENTS.md) の安全規約と、依頼範囲内の調査・編集・検証を確認待ちで止めない方針を守る。
+
+設定はこのチェックアウトで次に開始する Codex セッションから反映される。
+起動済みセッションには自動反映されない。CLI の起動オプションや管理ポリシーがある場合は、
+そちらが優先される。承認付きの運用へ戻す場合は、このファイルの 2 値を
+`approval_policy = "on-request"` / `sandbox_mode = "workspace-write"` に変更し、新しいセッションを開始する。
+この 2 値の変更はユーザーが明示的に依頼した場合だけ行う。
+
+設定の意味と優先順位は OpenAI 公式ドキュメントの
+[Sandbox](https://learn.chatgpt.com/docs/sandboxing) と
+[Config basics](https://learn.chatgpt.com/docs/config-file/config-basic) を参照する。
 
 このディレクトリを初めて開くと Codex が trust を尋ねる。
 trust したチェックアウトでだけ [.codex/config.toml](config.toml) の共有設定が有効になる。
