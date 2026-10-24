@@ -65,7 +65,7 @@
 
 ## Git 運用
 
-- 単一ユーザーのリポジトリであり、`master` へ直接コミットしてよい。
+- 単一ユーザーのリポジトリであり、`main` へ直接コミットしてよい。
   コミットと push は依頼があるときだけ行う。
 - コミットには今回自分が加えた変更だけを含める。`git add -A`・`git add .`・`git commit -a` は
   使わず、ファイル名を指定してステージする。作業開始時に既に変更・追加されていたファイルは、
@@ -76,8 +76,8 @@
   `Co-Authored-By` トレーラーを付けない。type は `feat` / `fix` / `docs` / `style` /
   `refactor` / `chore`。`scope` は任意で、変更対象が明確になる場合だけ付ける。
   既存履歴は英語の自由形式だが書き換えず、新規コミットから本形式とする。
-- worktree で進めるタスクは `.claude/worktrees/<name>`（gitignored）に `origin/master` から作り、
-  x-ship で `master` へ fast-forward マージして push したあと、同じ作業で worktree とブランチを
+- worktree で進めるタスクは `.claude/worktrees/<name>`（gitignored）に `origin/main` から作り、
+  x-ship で `main` へ fast-forward マージして push したあと、同じ作業で worktree とブランチを
   削除する。worktree の `_zshrc` は `~/.zshrc` の symlink 先ではないため、マージするまで実環境に
   反映されない。マージ時もメインチェックアウトの未コミット変更は保持する。
 

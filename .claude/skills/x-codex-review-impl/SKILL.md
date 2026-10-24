@@ -5,7 +5,7 @@ allowed-tools: Bash, Read, Write, Grep, Glob
 ---
 
 作業中のタスク worktree のルートで、未コミット変更とベースブランチとの差分を合わせて
-レビューする。master 上では実行しない。
+レビューする。main 上では実行しない。
 レビューだけの依頼では差分・指摘の報告で完了し、実装や index を変更しない。
 修正ループは、修正までの依頼や x-ship など、既に実装の修正が承認されている場合に使う。
 
@@ -23,7 +23,7 @@ allowed-tools: Bash, Read, Write, Grep, Glob
 一意な `REVIEW_ID` を使い、以下を `/tmp/x-impl-<REVIEW_ID>/` に保存する。
 
 - `git status --porcelain` と `git diff HEAD`（未コミット変更）。
-- ベースは `origin/master` があればそれ、なければ `master`。
+- ベースは `origin/main` があればそれ、なければ `main`。
   `git diff --name-status "$BASE_BRANCH"...HEAD` と `git diff "$BASE_BRANCH"...HEAD`。
 - ベースと HEAD の SHA、`git rev-list --left-right --count "$BASE_BRANCH"...HEAD` による
   ahead/behind、`git merge-base --is-ancestor "$BASE_BRANCH" HEAD` の結果。

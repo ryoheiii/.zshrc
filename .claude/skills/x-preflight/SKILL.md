@@ -13,17 +13,17 @@ allowed-tools: Bash, Read, Grep, Glob
   自分の継続タスクの差分は保持して続行する。出所不明の差分や他セッションとの競合は
   上書き・stash・破棄せず BLOCKED として報告する。メインチェックアウトの未コミット変更
   （作業中の `_zshrc` など）はユーザーのものとして触れない。
-- 新規タスクでは `git fetch origin` 後、`origin/master` から専用 worktree とブランチを作る。
+- 新規タスクでは `git fetch origin` 後、`origin/main` から専用 worktree とブランチを作る。
   メインチェックアウトを切り替えず、他セッションのブランチを更新しない。
   Claude Code は EnterWorktree（`.claude/worktrees/<name>` に作成）を使う。そのセッション内では
   `git -C` や `$(git …)` を含む複合コマンドが拒否されるため、Git の確認は単純なコマンドを並べて行う。
-  Codex は `git worktree add .claude/worktrees/<name> -b <type>/<name> origin/master`
+  Codex は `git worktree add .claude/worktrees/<name> -b <type>/<name> origin/main`
   （`<type>` は `feat` / `fix` / `docs` / `chore` など）で作る。
 - 既に今回のタスク用 worktree にいる場合は、ブランチとベースを確認して再利用する。
   fetch 失敗やベース不明は報告し、未確認の状態を最新扱いしない。
 - worktree の `_zshrc` は `~/.zshrc` の symlink 先ではないため、マージするまで実環境に反映されない。
   `bats test` と手動の起動検査は worktree のルートで実行し、worktree 側のファイルを対象にする。
-- x-ship で master へマージするタスクはこの worktree で進める。master への直接コミットが
+- x-ship で main へマージするタスクはこの worktree で進める。main への直接コミットが
   許されている小さな変更に worktree を強制しない。
 
 ## 変更に必要な環境とベースライン

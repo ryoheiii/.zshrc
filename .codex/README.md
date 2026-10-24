@@ -15,7 +15,7 @@ Claude Code も使うため、特定モデルだけを前提にした指示に�
 | `x-deep-plan` | 設計上の未決事項を調査し、実装計画を作成 |
 | `x-codex-review-plan` | 具体的な計画の外部レビュー |
 | `x-codex-review-impl` | 差分の外部レビュー。`final` は ship の承認記録を作成 |
-| `x-ship` | コミットから最終レビューゲート・`master` への fast-forward マージ・push・後片付けまで |
+| `x-ship` | コミットから最終レビューゲート・`main` への fast-forward マージ・push・後片付けまで |
 
 - Codex では `.codex/skills/<name>/SKILL.md` を読んで手順に従う
   （`~/.codex/prompts/` に汎用シムがあればそれ経由でも呼べる）。
