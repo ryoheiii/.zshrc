@@ -51,7 +51,6 @@ if [[ $1 == install ]]; then
     # 途中で失敗した場合は、退避できたファイルを元へ戻す。
     rollback() {
         trap - ERR
-        if is_installed; then unlink -- "$rc"; fi
         for name in .zshrc .zshrc.zwc; do
             if exists "$backup/$name" && ! exists "$HOME/$name"; then
                 mv -- "$backup/$name" "$HOME/$name"

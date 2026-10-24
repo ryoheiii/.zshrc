@@ -105,6 +105,18 @@ setup() {
     [ ! -e "$BACKUP" ]
 }
 
+@test "最初の退避が失敗しても手動導入済みのリンクを削除しない" {
+    ln -s "$SOURCE_FILE" "$HOME/.zshrc"
+    printf '元のコンパイル結果\n' > "$HOME/.zshrc.zwc"
+    mkdir "$HOME/bin"
+    printf '#!/bin/sh\nexit 1\n' > "$HOME/bin/mv"
+    chmod +x "$HOME/bin/mv"
+    run -1 env PATH="$HOME/bin:$PATH" bash "$SETUP_SCRIPT" install
+    [ "$(readlink "$HOME/.zshrc")" = "$SOURCE_FILE" ]
+    [ "$(cat "$HOME/.zshrc.zwc")" = '元のコンパイル結果' ]
+    [ ! -e "$BACKUP" ]
+}
+
 @test "リンク作成が失敗しても退避した設定とコンパイル結果を戻す" {
     printf '元の設定\n' > "$HOME/.zshrc"
     printf '元のコンパイル結果\n' > "$HOME/.zshrc.zwc"
