@@ -173,6 +173,41 @@ setup() {
     [ "$(wc -l < "$TOOLS_DOWNLOAD_LOG")" -eq 4 ]
 }
 
+@test "update は別 remote の追跡設定に従わず公式 origin master を取り込む" {
+    run -0 bash "$SETUP_SCRIPT" install
+    local repositories=(ohmyzsh/ohmyzsh.git junegunn/fzf.git)
+    local directories=("$HOME/.oh-my-zsh" "$HOME/.fzf")
+    local i upstream fork directory
+    for i in 0 1; do
+        upstream="$BATS_TEST_TMPDIR/upstream/${repositories[$i]}"
+        fork="$BATS_TEST_TMPDIR/fork-$i"
+        directory="${directories[$i]}"
+
+        # 同じ起点から fork と公式を別々に進め、fork を追跡させる。
+        git clone -q "$upstream" "$fork"
+        printf 'fork だけの変更\n' > "$fork/fork-only"
+        git -C "$fork" add -- fork-only
+        git -C "$fork" -c user.name=テスト -c user.email=test@example.invalid \
+            commit -qm 'fork 側の更新'
+        git -C "$directory" remote add fork "$fork"
+        git -C "$directory" fetch -q fork
+        git -C "$directory" branch --set-upstream-to=fork/master master
+
+        printf '公式の変更\n' > "$upstream/official-update"
+        git -C "$upstream" add -- official-update
+        git -C "$upstream" commit -qm '公式側の更新'
+    done
+
+    run -0 bash "$SETUP_SCRIPT" update
+    for i in 0 1; do
+        upstream="$BATS_TEST_TMPDIR/upstream/${repositories[$i]}"
+        directory="${directories[$i]}"
+        [ ! -e "$directory/fork-only" ]
+        [ "$(cat "$directory/official-update")" = '公式の変更' ]
+        [ "$(git -C "$directory" rev-parse HEAD)" = "$(git -C "$upstream" rev-parse master)" ]
+    done
+}
+
 @test "update は依存リポジトリの未コミット変更を保持して停止する" {
     run -0 bash "$SETUP_SCRIPT" install
     printf '# 手元の変更\n' > "$HOME/.oh-my-zsh/oh-my-zsh.sh"

@@ -44,7 +44,7 @@ sync_repo() {
         [[ $(git -C "$directory" config --get remote.origin.url) == "$url" ]] || fail "$directory の origin が公式 URL と異なります。"
         if [[ $action == update ]]; then
             [[ -z $(git -C "$directory" status --porcelain) ]] || fail "$directory に未コミット変更があります。"
-            git -C "$directory" pull --ff-only
+            git -C "$directory" pull --ff-only origin master
         fi
     else
         git clone --depth 1 "$url" "$directory"
