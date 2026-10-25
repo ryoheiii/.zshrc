@@ -21,6 +21,9 @@ Oh My Zsh を土台に、Starship・fzf・zoxide を組み合わせます。追�
 入力候補の `zsh-autosuggestions` と色分けの `zsh-syntax-highlighting` は、
 現在の Oh My Zsh に同梱されたプラグインを使います。別途 clone する必要はありません。
 プロンプトの見た目は [starship.toml](starship.toml) で管理します。
+`ZSH_THEME` は空のままにし、Starship でプロンプトと入力位置を同じ行に表示します。
+パスはホームの `~` 以外を省略せず、Git のブランチ・変更状態・rebase などの進行状態を表示します。
+パスや入力が端末の幅を超える場合は、端末側で折り返されます。
 
 ## セットアップ
 

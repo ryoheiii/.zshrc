@@ -1,14 +1,15 @@
-# 現在地・Git・実行結果に絞り、専用フォントなしで読めるプロンプトにする。
-format = "$username$hostname$directory$git_branch$git_status$cmd_duration$line_break$status$character"
+# 現在地・Git・実行結果と入力位置を同じ行に表示し、専用フォントを不要にする。
+format = "$username$hostname$directory$git_branch$git_state$git_status$cmd_duration$status$character"
 add_newline = false
 
 # SSH 接続時や root での操作は Starship 標準のユーザー表示を使う。
 [hostname]
 ssh_symbol = ""
 
-# 深い場所では末尾を表示し、Git のルート名も残す。
+# ホームだけを ~ に置き換え、Git リポジトリ内でも途中のパスを省略しない。
 [directory]
-truncation_length = 3
+truncation_length = 0
+truncate_to_repo = false
 read_only = " [read-only]"
 
 # ブランチ名の前の専用フォント記号を省く。
@@ -23,7 +24,7 @@ diverged = "<>"
 renamed = "r"
 deleted = "x"
 
-# 失敗したコマンドの終了コードを入力行の先頭に表示する。
+# 失敗したコマンドの終了コードを入力記号の直前に表示する。
 [status]
 disabled = false
 symbol = ""
