@@ -16,6 +16,7 @@ Oh My Zsh を土台に、Starship・fzf・zoxide を組み合わせます。追�
 | [Oh My Zsh](https://github.com/ohmyzsh/ohmyzsh) | 補完・履歴・キー操作・Git alias とプラグインの読み込み |
 | [Starship](https://starship.rs/guide/) | 現在地・Git ブランチと変更状態・実行時間・終了コード |
 | [fzf](https://github.com/junegunn/fzf#key-bindings-for-command-line) | 履歴・ファイル・ディレクトリの絞り込み検索 |
+| [fzf-tab](https://github.com/Aloxaf/fzf-tab) | Tab 補完の候補を検索して選択 |
 | [zoxide](https://github.com/ajeetdsouza/zoxide) | よく訪問するディレクトリへ `z` / `zi` で移動 |
 
 入力候補の `zsh-autosuggestions` と色分けの `zsh-syntax-highlighting` は、
@@ -24,6 +25,45 @@ Oh My Zsh を土台に、Starship・fzf・zoxide を組み合わせます。追�
 `ZSH_THEME` は空のままにし、Starship でプロンプトと入力位置を同じ行に表示します。
 パスはホームの `~` 以外を省略せず、Git のブランチ・変更状態・rebase などの進行状態を表示します。
 パスや入力が端末の幅を超える場合は、端末側で折り返されます。
+
+### 有効なプラグイン
+
+| プラグイン | できること |
+|---|---|
+| `git` | `gst`・`gd`・`gco` などで Git 操作を短縮 |
+| `fzf` | Ctrl+R の履歴検索、Ctrl+T のファイル選択、Alt+C の移動 |
+| `fzf-tab` | Tab で出た補完候補を文字入力で絞り込む。Enter は候補の採用で、コマンド実行はしない |
+| `zoxide` | `z`・`zi` で訪問済みディレクトリへ移動 |
+| `zsh-autosuggestions` | 入力候補を薄く表示。行末の → で採用 |
+| `zsh-syntax-highlighting` | 入力中の構文を色分け |
+| `vscode` | `vsc` で現在地を開き、`vscg file:42` で指定行、`vscd a b` で差分を表示 |
+| `extract` | `extract archive.tar.gz` で形式に応じて展開。元のアーカイブと現在地は保持 |
+| `sudo` | Esc を2回押して、入力中または直前のコマンドに `sudo` を付ける。実行は Enter |
+| `copypath` | `copypath` または `copypath file` で絶対パスをクリップボードへコピー |
+
+`fzf-tab` だけを外部プラグインとして取得し、残りは Oh My Zsh 同梱版を使います。
+`vscode` は `code` が利用できる場合、`sudo` は同名のコマンドがある場合に有効になります。
+入力支援は行編集できる端末でだけ有効になります。
+共通する先頭部分がある候補は、最初の Tab でそこまで補完し、次の Tab で検索画面を開きます。
+fzf-tab が未導入なら標準の補完メニューへ戻ります。起動時のダウンロードはありません。
+Oh My Zsh の補完キャッシュは `${XDG_CACHE_HOME:-$HOME/.cache}/oh-my-zsh/.zcompdump` に保存し、
+OS 側の `.zcompdump` と分離します。プラグイン追加後も、毎回の補完キャッシュ再生成を防ぎます。
+展開には形式に応じた `tar`・`unzip`・`7z` などが必要です。コピーには利用可能なクリップボードが必要で、
+WSL では Windows の `clip.exe`・`powershell.exe` に対応します。パスは Linux 形式のままです。
+
+### VS Code と WSL
+
+WSL 内で `code .` が使える状態なら、`vsc` でも同じフォルダーを開けます。
+`vscr .` は既存ウィンドウを再利用し、`vscn .` は新しいウィンドウを開きます。
+このプラグインは VS Code 本体や拡張機能をインストールせず、既存の `code` を短縮します。
+Windows 側の `/mnt/<ドライブ>/` にしか `code` がない場合は、起動時の遅い探索を避けるため読み込みません。
+その場合も `code .` 自体は直接利用できます。
+
+VS Code の WSL 接続先では「Terminal: Select Default Profile」で zsh を選ぶと、この設定を使えます。
+成功・失敗表示や出力コピーを提供する [Shell Integration](https://code.visualstudio.com/docs/terminal/shell-integration) は
+VS Code が通常自動で有効にします。ターミナルタブの詳細で状態を確認でき、追加の source は通常不要です。
+VS Code 側の補完ポップアップが Tab を受け取る場合は、`terminal.integrated.suggest.enabled` を無効にすると
+zsh / fzf-tab の補完操作に統一できます。既存の Emacs 用 `EDITOR` は変更しません。
 
 ## セットアップ
 
@@ -60,7 +100,7 @@ Emacs・Node.js は任意です。[追加ツールの導入](docs/tools.md)を�
 
 | 操作 | 内容 |
 |---|---|
-| Tab / 矢印キー | 大文字小文字を区別しない補完 / 候補の選択 |
+| Tab | 補完候補を検索して選択（fzf-tab）。未導入なら標準の補完メニュー |
 | ↑ / ↓ | 入力した先頭文字に一致する履歴を検索。空なら通常の履歴移動 |
 | Ctrl+R | fzf で履歴を絞り込み検索。fzf がなければ標準の履歴検索 |
 | Ctrl+T / Alt+C | ファイルのパスを挿入 / ディレクトリを検索して移動（fzf） |
@@ -91,14 +131,15 @@ bash setup.sh update
 exec zsh
 ```
 
-`update` は Oh My Zsh・fzf・Starship・zoxide を公式の最新版へ更新します。
+`update` は Oh My Zsh・fzf・fzf-tab・Starship・zoxide を公式の最新版へ更新します。
+fzf-tab の配置先は `${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab` です。
 依存リポジトリの未コミット変更や異なる取得元は上書きせず停止します。
 途中で失敗した場合、先に更新したツールは元へ戻りません。
 
-検証には bats-core 1.5 以上を使います。
+検証には bats-core 1.5 以上と Python 3（TTY 付き検査用）を使います。
 
 ```sh
-sudo apt install bats
+sudo apt install bats python3
 cd "$HOME/.config/zsh"
 bats test
 ```

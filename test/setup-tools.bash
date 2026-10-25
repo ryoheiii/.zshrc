@@ -5,12 +5,13 @@ prepare_tools() {
     local upstream="$BATS_TEST_TMPDIR/upstream"
     local repo
     git config --file "$GIT_CONFIG_GLOBAL" url."$upstream/".insteadOf https://github.com/
-    for repo in ohmyzsh/ohmyzsh.git junegunn/fzf.git; do
+    for repo in ohmyzsh/ohmyzsh.git junegunn/fzf.git Aloxaf/fzf-tab.git; do
         git init -q -b master "$upstream/$repo"
         git -C "$upstream/$repo" config user.name 'テスト'
         git -C "$upstream/$repo" config user.email 'test@example.invalid'
     done
     local omz="$upstream/ohmyzsh/ohmyzsh.git"
+    printf '/custom/\n' > "$omz/.gitignore"
     mkdir -p "$omz/plugins/zsh-autosuggestions" "$omz/plugins/zsh-syntax-highlighting"
     touch "$omz/oh-my-zsh.sh" "$omz/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh" \
         "$omz/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh"
@@ -24,7 +25,8 @@ mkdir -p "$(dirname "$0")/bin"
 printf '#!/bin/sh\nexit 0\n' > "$(dirname "$0")/bin/fzf"
 chmod +x "$(dirname "$0")/bin/fzf"
 SCRIPT
-    for repo in ohmyzsh/ohmyzsh.git junegunn/fzf.git; do
+    touch "$upstream/Aloxaf/fzf-tab.git/fzf-tab.plugin.zsh"
+    for repo in ohmyzsh/ohmyzsh.git junegunn/fzf.git Aloxaf/fzf-tab.git; do
         git -C "$upstream/$repo" add -- .
         git -C "$upstream/$repo" commit -qm 'テスト用の配布元'
     done
