@@ -9,6 +9,7 @@ setup() {
     export HOME="$BATS_TEST_TMPDIR/home with spaces"
     mkdir -p "$HOME"
     export ZDOTDIR="$HOME"
+    unset ZSH_CUSTOM
     BACKUP="$HOME/.zshrc.zsh-config-backup"
     prepare_tools
 }
@@ -17,6 +18,7 @@ setup() {
     run -0 bash "$SETUP_SCRIPT" install
     [ -f "$HOME/.oh-my-zsh/oh-my-zsh.sh" ]
     [ -x "$HOME/.fzf/bin/fzf" ]
+    [ -f "$HOME/.oh-my-zsh/custom/plugins/fzf-tab/fzf-tab.plugin.zsh" ]
     [ -x "$HOME/.local/bin/starship" ]
     [ -x "$HOME/.local/bin/zoxide" ]
     [ "$(readlink "$HOME/.zshrc")" = "$SOURCE_FILE" ]
@@ -175,10 +177,10 @@ setup() {
 
 @test "update は別 remote の追跡設定に従わず公式 origin master を取り込む" {
     run -0 bash "$SETUP_SCRIPT" install
-    local repositories=(ohmyzsh/ohmyzsh.git junegunn/fzf.git)
-    local directories=("$HOME/.oh-my-zsh" "$HOME/.fzf")
+    local repositories=(ohmyzsh/ohmyzsh.git junegunn/fzf.git Aloxaf/fzf-tab.git)
+    local directories=("$HOME/.oh-my-zsh" "$HOME/.fzf" "$HOME/.oh-my-zsh/custom/plugins/fzf-tab")
     local i upstream fork directory
-    for i in 0 1; do
+    for i in 0 1 2; do
         upstream="$BATS_TEST_TMPDIR/upstream/${repositories[$i]}"
         fork="$BATS_TEST_TMPDIR/fork-$i"
         directory="${directories[$i]}"
@@ -199,7 +201,7 @@ setup() {
     done
 
     run -0 bash "$SETUP_SCRIPT" update
-    for i in 0 1; do
+    for i in 0 1 2; do
         upstream="$BATS_TEST_TMPDIR/upstream/${repositories[$i]}"
         directory="${directories[$i]}"
         [ ! -e "$directory/fork-only" ]
@@ -231,4 +233,18 @@ setup() {
     run -1 bash "$SETUP_SCRIPT" update
     [ -L "$HOME/.local/bin/starship" ]
     [ "$("$HOME/保持するツール")" = 'starship test-version' ]
+}
+
+@test "fzf-tab の独自配置先も導入し、未コミット変更と異なる配布元を保護する" {
+    export ZSH_CUSTOM="$HOME/custom plugins"
+    run -0 bash "$SETUP_SCRIPT" install
+    local plugin="$ZSH_CUSTOM/plugins/fzf-tab"
+    [ -f "$plugin/fzf-tab.plugin.zsh" ]
+    printf '# 保持する変更\n' > "$plugin/fzf-tab.plugin.zsh"
+    run -1 bash "$SETUP_SCRIPT" update
+    [ "$(cat "$plugin/fzf-tab.plugin.zsh")" = '# 保持する変更' ]
+    git -C "$plugin" remote set-url origin https://example.invalid/unrelated.git
+    run -1 bash "$SETUP_SCRIPT" install
+    [[ $output == *'origin が公式 URL と異なります'* ]]
+    [ "$(cat "$plugin/fzf-tab.plugin.zsh")" = '# 保持する変更' ]
 }

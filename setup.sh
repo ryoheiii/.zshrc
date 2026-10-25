@@ -71,6 +71,8 @@ install_tools() (
     done
     sync_repo "$HOME/.fzf" https://github.com/junegunn/fzf.git
     bash "$HOME/.fzf/install" --bin
+    # 外部プラグインもセットアップ時に取得し、update で公式 master へ追従する。
+    sync_repo "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fzf-tab" https://github.com/Aloxaf/fzf-tab.git
 
     mkdir -p "$HOME/.local/bin"
     local staging version
