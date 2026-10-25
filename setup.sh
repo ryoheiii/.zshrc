@@ -116,11 +116,17 @@ check_package_environment() {
 
 # 個人の Git 設定・hooks・未追跡ファイルを持ち出さず、更新可能な checkout を複製する。
 package_repo() {
-    local source=$1 destination=$2 url=$3
+    local source=$1 destination=$2 url=$3 official
     [[ -d $source/.git && ! -L $source ]] || fail "$source が通常の Git checkout ではありません。"
     [[ $(git -C "$source" config --get remote.origin.url) == "$url" ]] || fail "$source の origin が公式 URL と異なります。"
     [[ -z $(git -C "$source" status --porcelain --untracked-files=no) ]] || fail "$source に未コミット変更があります。"
-    git -c core.hooksPath=/dev/null clone --quiet --single-branch --no-tags --no-local --template= -- "$source" "$destination"
+    # URL だけではローカルコミットを判別できないため、取得済みの公式 master と照合する。
+    official=$(git -C "$source" rev-parse --verify refs/remotes/origin/master) ||
+        fail "$source に公式 master の追跡 ref がありません。"
+    [[ $(git -C "$source" rev-parse HEAD) == "$official" &&
+       $(git -C "$source" rev-parse --verify refs/heads/master) == "$official" ]] ||
+        fail "$source の HEAD または master が公式の追跡コミットと一致しません。"
+    git -c core.hooksPath=/dev/null clone --quiet --branch master --single-branch --no-tags --no-local --template= -- "$source" "$destination"
     git -C "$destination" remote set-url origin "$url"
     # clone 実行者の名前・メールアドレスが入る reflog は配布しない。
     rm -rf -- "$destination/.git/logs"
@@ -281,13 +287,14 @@ extract_package() (
     done
     activate_configuration
     committed=yes
-    printf '依存物を展開しました。旧ファイルの退避先: %s\n' "$saved"
+    # 配置完了後の通知失敗で、ツールだけを旧版へ戻さない。
+    report_configuration
+    printf '依存物を展開しました。旧ファイルの退避先: %s\n' "$saved" || true
 )
 
 # 設定リンクの作成はオンライン導入とオフライン展開で共通にする。
 activate_configuration() {
     if is_installed && [[ -d $backup && ! -L $backup ]]; then
-        printf '導入済みです: %s\n' "$rc"
         return
     fi
     # 途中で失敗した場合は、退避できたファイルを元へ戻す。
@@ -306,7 +313,11 @@ activate_configuration() {
     if exists "$compiled"; then mv -- "$compiled" "$backup/.zshrc.zwc"; fi
     ln -s -- "$source_file" "$rc"
     trap - ERR
-    printf '導入しました。退避先: %s\n設定ファイルへの追記は不要です。exec zsh で起動し直してください。\n' "$backup"
+}
+
+# 通知は変更完了後に行い、出力先の障害を導入トランザクションの失敗にしない。
+report_configuration() {
+    printf '導入しました。退避先: %s\n設定ファイルへの追記は不要です。exec zsh で起動し直してください。\n' "$backup" || true
 }
 
 # 梱包は現在の設定リンクや退避先を変更しない。
@@ -338,6 +349,7 @@ if [[ $action == install || $action == --extract-package ]]; then
     else
         install_tools
         activate_configuration
+        report_configuration
     fi
 else
     # 別の設定へ差し替えられていたら、触らずに止まる。

@@ -179,6 +179,7 @@ SCRIPT
     git -C "$plugin" add -- fzf-tab.plugin.zsh
     git -C "$plugin" -c user.name=テスト -c user.email=test@example.invalid commit -qm 'テスト用'
     git -C "$plugin" remote add origin https://github.com/Aloxaf/fzf-tab.git
+    git -C "$plugin" update-ref refs/remotes/origin/master HEAD
     run -0 pack
     offline_home
     run -0 bash "$SETUP_SCRIPT" --extract-package "$ARCHIVE"
@@ -209,4 +210,35 @@ PYTHON
         run -1 bash "$SETUP_SCRIPT" --extract-package "$ARCHIVE"
         [ -f "$HOME/.oh-my-zsh/oh-my-zsh.sh" ]
     done
+}
+
+@test "公式追跡 ref と異なるローカルコミットは clean でも梱包しない" {
+    printf '旧アーカイブ\n' > "$ARCHIVE"
+    local omz="$HOME/.oh-my-zsh"
+    printf '個別の設定\n' > "$omz/private.zsh"
+    git -C "$omz" add -- private.zsh
+    git -C "$omz" -c user.name=テスト -c user.email=test@example.invalid commit -qm 'ローカルの変更'
+    run -1 pack
+    [[ $output == *'公式の追跡コミットと一致しません'* ]]
+    [ "$(cat "$ARCHIVE")" = '旧アーカイブ' ]
+}
+
+@test "別ブランチを選んでいてもローカル master の独自コミットを梱包しない" {
+    local omz="$HOME/.oh-my-zsh"
+    git -C "$omz" -c user.name=テスト -c user.email=test@example.invalid commit --allow-empty -qm 'ローカルの変更'
+    git -C "$omz" checkout -q -b official origin/master
+    run -1 pack
+    [[ $output == *'公式の追跡コミットと一致しません'* ]]
+    [ ! -e "$ARCHIVE" ]
+}
+
+@test "完了通知の出力失敗でも設定とツールは同じ新しい状態を保つ" {
+    run -0 pack
+    run -0 bash "$SETUP_SCRIPT" uninstall
+    printf '旧設定\n' > "$HOME/.zshrc"
+    printf '#!/bin/sh\necho old\n' > "$HOME/.local/bin/starship"
+    run -0 bash -c 'bash "$1" --extract-package "$2" > /dev/full' _ "$SETUP_SCRIPT" "$ARCHIVE"
+    [ -L "$HOME/.zshrc" ]
+    [ "$(cat "$HOME/.zshrc.zsh-config-backup/.zshrc")" = '旧設定' ]
+    [ "$("$HOME/.local/bin/starship")" = 'starship test-version' ]
 }
