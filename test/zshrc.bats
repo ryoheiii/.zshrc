@@ -78,6 +78,7 @@ setup() {
         source "$ZDOTDIR/.zshrc" || exit 1
         [[ ${_comps[fallbackprobe]} == _files ]] || exit 1
         [[ $(bindkey "^A") == *beginning-of-line && $(bindkey "^E") == *end-of-line ]] || exit 1
+        [[ $(bindkey "^P") == *up-line-or-history && $(bindkey "^N") == *down-line-or-history ]] || exit 1
         [[ -o autocd && -o autopushd && -o pushdignoredups && -o pushdminus && -o pushdsilent ]] || exit 1
         [[ -o sharehistory && -o histignoredups && -o histignorespace && -o histverify ]] || exit 1
         [[ -o histexpiredupsfirst && -o histsavenodups && -o histfindnodups ]] || exit 1
@@ -191,6 +192,8 @@ setup() {
         bindkey "^[[A"
         bindkey "^[[B"
         bindkey "^R"
+        bindkey "^P"
+        bindkey "^N"
     '
     [ -z "$stderr" ]
     [ "${lines[0]}" = '"^A" beginning-of-line' ]
@@ -198,6 +201,8 @@ setup() {
     [ "${lines[2]}" = '"^[[A" up-line-or-beginning-search' ]
     [ "${lines[3]}" = '"^[[B" down-line-or-beginning-search' ]
     [ "${lines[4]}" = '"^R" history-incremental-search-backward' ]
+    [ "${lines[5]}" = '"^P" up-line-or-beginning-search' ]
+    [ "${lines[6]}" = '"^N" down-line-or-beginning-search' ]
 }
 
 @test "履歴は保存件数に余裕を持たせ、重複を整理して履歴展開を確認できる" {

@@ -37,6 +37,8 @@ setup() {
         [[ $(bindkey "^[c") == *fzf-cd-widget ]] || exit 1
         [[ $(bindkey "^[^[") == *sudo-command-line ]] || exit 1
         [[ $(bindkey "^[[A") == *up-line-or-beginning-search ]] || exit 1
+        [[ $(bindkey "^P") == *up-line-or-beginning-search ]] || exit 1
+        [[ $(bindkey "^N") == *down-line-or-beginning-search ]] || exit 1
         [[ ${aliases[gco]} == "git checkout" ]]
     '
     [ -z "$output" ]

@@ -224,6 +224,13 @@ alias ln='ln -i'
 bindkey '^[[H' beginning-of-line
 bindkey '^[[F' end-of-line
 
+# Oh My Zsh の履歴検索が使える場合、Ctrl+p / Ctrl+n を ↑ / ↓ と同じ操作にする。
+# Shift は不要。未導入時は emacs キーマップの通常の履歴移動を使う。
+if (( $+widgets[up-line-or-beginning-search] && $+widgets[down-line-or-beginning-search] )); then
+    bindkey '^P' up-line-or-beginning-search
+    bindkey '^N' down-line-or-beginning-search
+fi
+
 
 ##################
 ### 補完ルール ###
