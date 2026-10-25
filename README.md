@@ -31,12 +31,22 @@ Ubuntu / WSL では次を実行します。公式ツールの取得にはイン�
 
 ```sh
 sudo apt update
-sudo apt install zsh git bash coreutils curl tar gzip
+sudo apt install zsh git bash coreutils curl tar gzip ca-certificates
 git clone git@github.com:ryoheiii/.zshrc.git "$HOME/.config/zsh"
 cd "$HOME/.config/zsh"
 bash setup.sh install
 exec zsh
 ```
+
+必要な apt パッケージは次のとおりです。fzf・Starship・zoxide は公式配布版を使うため、
+これらの apt パッケージや Rust・Go のビルド環境は不要です。
+
+| 用途 | apt パッケージ |
+|---|---|
+| 通常のセットアップ | `zsh git bash coreutils curl tar gzip ca-certificates` |
+| オフライン用の梱包・展開 | 上記に加えて `python3`（3.9 以上。アーカイブの検査用） |
+| 回帰テスト | `bats`（1.5 以上） |
+| 任意の追加ツール | `emacs`、fnm 導入時は `unzip` |
 
 clone にはリポジトリへのアクセス権と GitHub に登録した SSH 鍵が必要です。
 既に clone 済みなら `cd` から実行してください。
@@ -55,6 +65,50 @@ chsh -s "$(command -v zsh)"
 変更後はログインし直します。
 言語と端末の設定は OS から引き継ぐため、日本語ロケールの生成は必須ではありません。
 Emacs・Node.js は任意です。[追加ツールの導入](docs/tools.md)を参照してください。
+
+## オフライン用の梱包・展開
+
+通信できる PC で通常のセットアップを済ませ、導入済みの依存物を圧縮します。
+[Emacs の梱包・展開コマンド](https://github.com/ryoheiii/.emacs.d/blob/main/emacs-setup.sh) と同じ名前です。
+
+```sh
+sudo apt install python3
+cd "$HOME/.config/zsh"
+bash setup.sh --packing-package
+```
+
+`package.tar.gz` に Oh My Zsh（同梱プラグインを含む）、fzf、Starship、zoxide を保存します。
+fzf-tab が標準配置に導入済みなら、それも含めます。Git のローカル設定・hooks・未追跡ファイル、
+独自の custom 設定、履歴・キャッシュ・資格情報、任意の Emacs・fnm・Node.js は含めません。
+zsh 本体などの OS パッケージは移行先の apt で用意します。依存リポジトリの追跡ファイルにある未コミット変更は
+梱包せず、エラーにします。圧縮に失敗した場合は既存のアーカイブを保持します。
+
+会社 PC へは、この設定リポジトリと `package.tar.gz` の両方を渡してください。
+設定リポジトリは Git で取得しても、必要なファイル（`setup.sh`・`_zshrc`・`starship.toml`）を
+コピーしても構いません。アーカイブを `setup.sh` と同じディレクトリへ置き、次を実行します。
+
+```sh
+sudo apt install zsh git bash coreutils tar gzip python3
+cd "$HOME/.config/zsh"
+bash setup.sh --extract-package
+exec zsh
+```
+
+`--extract-package` はネットワークへ接続せず依存物を配置し、通常の `install` と同じく
+既存の `~/.zshrc`・コンパイル結果を退避して設定リンクを作ります。続けて `install` を実行する必要はありません。
+`-p` / `-x` も使え、`bash setup.sh --extract-package /path/to/package.tar.gz` のように
+アーカイブの場所を指定できます（梱包時も同様）。自分で作成した信頼できるアーカイブだけを使ってください。
+
+配布元と配布先は同じ OS・CPU アーキテクチャに揃えてください。共有ライブラリの互換性も必要です。
+展開先の外へ向くパス・リンク、形式不一致、不足ファイル、バイナリの実行失敗は配置前に拒否します。
+梱包・展開では `ZSH` / `ZSH_CUSTOM` は未設定か標準配置にしてください。
+プロンプトに独自の `STARSHIP_CONFIG` を指定している場合、その設定は別途移行してください。
+
+既存のツールは `~/.zsh-package-backup.XXXXXX/` に退避し、配置途中の失敗時は復元します。
+成功後も退避先は残り、`restore-map.txt` で元の配置先を確認できます。独自の custom 設定は
+自動統合しないため、必要なら退避先から移行してください。動作確認後に不要な退避先を手動で削除できます。
+`uninstall` は設定リンクの復元だけを行い、ツールの版は戻しません。
+通信できる環境では、展開した依存物も `bash setup.sh update` で更新できます。
 
 ## 使い方
 

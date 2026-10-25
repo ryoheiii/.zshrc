@@ -10,3 +10,7 @@ CLAUDE.local.md
 .claude/settings.local.json
 .claude/hookify.*.local.md
 .claude/worktrees/
+
+# オフライン配布用の依存物アーカイブ
+/package.tar.gz
+/package.tar.gz.*
