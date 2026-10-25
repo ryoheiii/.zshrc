@@ -171,7 +171,7 @@ setup() {
         up bar; [[ $PWD == "$ZDOTDIR/a/src/foo/src/bar" ]] || { print "up bar: $PWD"; exit 1; }
         cd /usr/share
         up usr; [[ $PWD == /usr ]] || { print "up usr: $PWD"; exit 1; }
-        for v in to p; do
+        for v in to p current_path target; do
             if (( $+parameters[$v] )); then print "up のローカル変数 $v が残っている"; exit 1; fi
         done
     '
