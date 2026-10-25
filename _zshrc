@@ -34,7 +34,18 @@ fi
 
 # Node.js は非対話で明示的に source する場合にも利用できるようにする。
 if __zshrc_has fnm; then
-    eval "$(fnm env --shell zsh)"
+    () {
+        local init
+        # シェルごとに一度だけ初期化する。失敗した場合は次の読み込みで再試行する。
+        if [[ ${__zshrc_fnm_pid:-} != $$ ]]; then
+            if init=$(fnm env --shell zsh) && eval "$init"; then
+                typeset -g __zshrc_fnm_pid=$$
+            fi
+        elif [[ -n $FNM_MULTISHELL_PATH ]]; then
+            # 再読み込みでは選択中のバージョンを保ち、その PATH を先頭へ戻す。
+            export PATH="$FNM_MULTISHELL_PATH/bin:$PATH"
+        fi
+    }
 fi
 
 # エディターが未指定なら、導入済みの emacsclient を使う。
@@ -60,56 +71,58 @@ zstyle ':omz:lib:directories' aliases no
 # 端末タイトルとプロンプトはそれぞれ端末・Starship に任せる。
 DISABLE_AUTO_TITLE=true
 ZSH_THEME=""
-# Git の短縮操作と、行編集できる端末での入力支援だけを読み込む。
-plugins=()
-if __zshrc_has git; then
-    plugins+=(git)
-fi
-# アーカイブの形式に応じた展開を Oh My Zsh の同梱機能で行う。
-if [ -f "$ZSH/plugins/extract/extract.plugin.zsh" ]; then
-    plugins+=(extract)
-fi
-# 絶対パスをクリップボードへコピーする。
-if [ -f "$ZSH/plugins/copypath/copypath.plugin.zsh" ]; then
-    plugins+=(copypath)
-fi
-# VS Code が利用できる場合だけ、起動・差分・行指定の短縮を追加する。
-if __zshrc_has code && [ -f "$ZSH/plugins/vscode/vscode.plugin.zsh" ]; then
-    VSCODE=code
-    plugins+=(vscode)
-fi
-if [[ -o zle && -t 0 && -t 1 && $TERM != dumb ]]; then
-    # Esc を2回押すと、入力中のコマンドへ sudo を付ける。
-    if __zshrc_has sudo && [ -f "$ZSH/plugins/sudo/sudo.plugin.zsh" ]; then
-        plugins+=(sudo)
-    fi
-    if __zshrc_has fzf; then
-        plugins+=(fzf)
-        # Tab の検索は fzf の後、入力候補と色分けの前に読み込む。
-        if [ -f "${ZSH_CUSTOM:-$ZSH/custom}/plugins/fzf-tab/fzf-tab.plugin.zsh" ]; then
-            plugins+=(fzf-tab)
-        fi
-    fi
-    if __zshrc_has zoxide; then
-        plugins+=(zoxide)
-    fi
-    if [ -f "$ZSH/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh" ]; then
-        plugins+=(zsh-autosuggestions)
-    fi
-    # 色分けは他のプラグインより後に読み込む。
-    if [ -f "$ZSH/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh" ]; then
-        plugins+=(zsh-syntax-highlighting)
-    fi
-fi
 if [ -f "$ZSH/oh-my-zsh.sh" ]; then
     # 再読み込みでフックや widget を重ねず、動的に登録された補完を保持する。
     if (( ! $+functions[omz] )); then
+        # Git の短縮操作と、行編集できる端末での入力支援だけを読み込む。
+        plugins=()
+        if __zshrc_has git && [ -f "$ZSH/plugins/git/git.plugin.zsh" ]; then
+            plugins+=(git)
+        fi
+        # アーカイブの形式に応じた展開を Oh My Zsh の同梱機能で行う。
+        if [ -f "$ZSH/plugins/extract/extract.plugin.zsh" ]; then
+            plugins+=(extract)
+        fi
+        # 絶対パスをクリップボードへコピーする。
+        if [ -f "$ZSH/plugins/copypath/copypath.plugin.zsh" ]; then
+            plugins+=(copypath)
+        fi
+        # VS Code が利用できる場合だけ、起動・差分・行指定の短縮を追加する。
+        if __zshrc_has code && [ -f "$ZSH/plugins/vscode/vscode.plugin.zsh" ]; then
+            VSCODE=code
+            plugins+=(vscode)
+        fi
+        if [[ -o zle && -t 0 && -t 1 && $TERM != dumb ]]; then
+            # Esc を2回押すと、入力中のコマンドへ sudo を付ける。
+            if __zshrc_has sudo && [ -f "$ZSH/plugins/sudo/sudo.plugin.zsh" ]; then
+                plugins+=(sudo)
+            fi
+            if __zshrc_has fzf && [ -f "$ZSH/plugins/fzf/fzf.plugin.zsh" ]; then
+                plugins+=(fzf)
+                # Tab の検索は fzf の後、入力候補と色分けの前に読み込む。
+                if [ -f "${ZSH_CUSTOM:-$ZSH/custom}/plugins/fzf-tab/fzf-tab.plugin.zsh" ]; then
+                    plugins+=(fzf-tab)
+                fi
+            fi
+            if __zshrc_has zoxide && [ -f "$ZSH/plugins/zoxide/zoxide.plugin.zsh" ]; then
+                plugins+=(zoxide)
+            fi
+            if [ -f "$ZSH/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh" ]; then
+                plugins+=(zsh-autosuggestions)
+            fi
+            # 色分けは他のプラグインより後に読み込む。
+            if [ -f "$ZSH/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh" ]; then
+                plugins+=(zsh-syntax-highlighting)
+            fi
+        fi
         source "$ZSH/oh-my-zsh.sh"
     fi
 else
     # 未導入でも静かに起動し、標準の補完と履歴を使えるようにする。
-    autoload -Uz compinit
-    compinit
+    if (( ! $+functions[compdef] )); then
+        autoload -Uz compinit
+        compinit
+    fi
     bindkey -e
     setopt auto_cd auto_pushd pushd_ignore_dups pushd_minus interactive_comments
     setopt share_history hist_ignore_dups hist_ignore_space hist_verify hist_expire_dups_first

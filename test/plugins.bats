@@ -60,6 +60,47 @@ setup() {
     done
 }
 
+@test "コマンドがあってもプラグインの実体がなければ警告を出さず除外する" {
+    mkdir -p "$ZDOTDIR/partial-omz/plugins" "$ZDOTDIR/empty-custom" "$ZDOTDIR/empty-home" "$ZDOTDIR/bin"
+    # 本体だけを借りた部分導入環境を作り、実際のプラグイン探索を通す。
+    for entry in oh-my-zsh.sh lib tools functions completions; do
+        ln -s "$ZSH/$entry" "$ZDOTDIR/partial-omz/$entry"
+    done
+    for tool in fzf zoxide; do
+        printf '#!/bin/sh\nexit 1\n' > "$ZDOTDIR/bin/$tool"
+        chmod +x "$ZDOTDIR/bin/$tool"
+    done
+    run -0 --separate-stderr env HOME="$ZDOTDIR/empty-home" ZSH="$ZDOTDIR/partial-omz" \
+        ZSH_CUSTOM="$ZDOTDIR/empty-custom" PATH="$ZDOTDIR/bin:/usr/bin:/bin" \
+        python3 "$PTY_RUN" zsh -d -i -c '
+        (( $+functions[omz] && $+functions[compdef] )) || exit 1
+        for tool in git fzf zoxide; do
+            __zshrc_has "$tool" || exit 1
+            (( ! ${plugins[(Ie)$tool]} )) || exit 1
+        done
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+}
+
+@test "起動後にコマンドが PATH から消えても読み込み済みプラグインの一覧を保持する" {
+    mkdir "$ZDOTDIR/bin" "$ZDOTDIR/empty-home"
+    printf '#!/bin/sh\nexit 1\n' > "$ZDOTDIR/bin/code"
+    chmod +x "$ZDOTDIR/bin/code"
+    run -0 --separate-stderr env HOME="$ZDOTDIR/empty-home" PATH="$ZDOTDIR/bin:/usr/bin:/bin" \
+        zsh -d -i -c '
+        (( ${plugins[(Ie)vscode]} && $+functions[vsc] )) || exit 1
+        before="${(j: :)plugins}"
+        path=()
+        if __zshrc_has code; then exit 1; fi
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ "${(j: :)plugins}" == "$before" ]] || exit 1
+        (( $+functions[vsc] ))
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+}
+
 @test "VS Code の短縮は空白付き引数と行指定を保持し、実際のエディターを起動しない" {
     mkdir "$ZDOTDIR/bin"
     printf '#!/bin/sh\nprintf "<%%s>\\n" "$@"\n' > "$ZDOTDIR/bin/code"

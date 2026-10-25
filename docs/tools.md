@@ -59,4 +59,6 @@ fnm default lts-latest
 
 `--skip-shell` は必須です。省略するとリンク先の `_zshrc` へ設定が追記されます。
 `.node-version` による自動切り替えは設定していません。
+`zns` で設定を再読み込みしても、`fnm use` で選択中のバージョンを保持します。
+新しい zsh では fnm の既定バージョンで初期化し、その後の切り替えはシェルごとに独立します。
 PATH は fnm の Node.js → `~/.local/share/fnm` → `~/.fzf/bin` → `~/.local/bin` → 元の PATH の順です。

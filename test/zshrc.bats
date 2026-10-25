@@ -68,6 +68,26 @@ setup() {
     [ -z "$stderr" ]
 }
 
+@test "Oh My Zsh がなくても再読み込みで補完登録と基本操作を保持する" {
+    mkdir "$ZDOTDIR/empty-home"
+    run -0 --separate-stderr env HOME="$ZDOTDIR/empty-home" ZSH="$ZDOTDIR/missing-omz" \
+        PATH=/usr/bin:/bin EDITOR=vi zsh -d -i -c '
+        (( $+functions[compdef] )) || exit 1
+        compdef _files fallbackprobe
+        source "$ZDOTDIR/.zshrc" || exit 1
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ ${_comps[fallbackprobe]} == _files ]] || exit 1
+        [[ $(bindkey "^A") == *beginning-of-line && $(bindkey "^E") == *end-of-line ]] || exit 1
+        [[ -o autocd && -o autopushd && -o pushdignoredups && -o pushdminus && -o pushdsilent ]] || exit 1
+        [[ -o sharehistory && -o histignoredups && -o histignorespace && -o histverify ]] || exit 1
+        [[ -o histexpiredupsfirst && -o histsavenodups && -o histfindnodups ]] || exit 1
+        [[ -o interactivecomments && ! -o beep && ! -o correct && ! -o correctall ]] || exit 1
+        (( HISTSIZE > SAVEHIST && SAVEHIST == 10000 ))
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+}
+
 @test "グローバル rc を読まない起動でも補完が初期化される" {
     # OS の設定に依存せず Oh My Zsh、未導入なら標準の compinit で初期化する
     run -0 --separate-stderr zsh -d -i -c '(( $+functions[compdef] )) || { print "compdef がない"; exit 1; }'
@@ -259,4 +279,63 @@ setup() {
         (( ! $+aliases[ecli] ))
     '
     [ -z "$stderr" ]
+}
+
+# fnm env のシェルごとの PATH 生成を再現し、実際の Node.js 導入に依存せず検査する。
+prepare_fnm() {
+    export HOME="$ZDOTDIR/fnm-home"
+    export PATH="$HOME/.local/share/fnm:/usr/bin:/bin"
+    mkdir -p "$HOME/.local/share/fnm"
+    cat > "$HOME/.local/share/fnm/fnm" <<'SCRIPT'
+#!/bin/sh
+[ "$*" = 'env --shell zsh' ] || exit 1
+if [ -f "$HOME/fnm-fail" ]; then
+    printf 'fnm env の失敗\n' >&2
+    exit 1
+fi
+multishell=$(mktemp -d "$HOME/multishell.XXXXXX")
+mkdir "$multishell/bin"
+printf '#!/bin/sh\nprintf "default\\n"\n' > "$multishell/bin/node"
+chmod +x "$multishell/bin/node"
+printf 'export FNM_MULTISHELL_PATH="%s"\nexport PATH="%s/bin:$PATH"\n' "$multishell" "$multishell"
+SCRIPT
+    chmod +x "$HOME/.local/share/fnm/fnm"
+}
+
+@test "fnm は再読み込みで選択版と PATH を保ち、子シェルでは独立して初期化する" {
+    prepare_fnm
+    run -0 --separate-stderr zsh -d -f -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ $(node) == default ]] || exit 1
+        export parent_multishell=$FNM_MULTISHELL_PATH
+        before=$PATH
+        # fnm use に相当する選択変更。再初期化すると新しい default に戻ってしまう。
+        printf "#!/bin/sh\nprintf selected" > "$FNM_MULTISHELL_PATH/bin/node"
+        source "$ZDOTDIR/.zshrc" || exit 1
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ $FNM_MULTISHELL_PATH == "$parent_multishell" && $PATH == "$before" ]] || exit 1
+        [[ $(node) == selected && $path[1] == "$FNM_MULTISHELL_PATH/bin" ]] || exit 1
+        (( ! $+parameters[init] )) || exit 1
+        zsh -d -f -c '\''
+            source "$ZDOTDIR/.zshrc" || exit 1
+            [[ $FNM_MULTISHELL_PATH != "$parent_multishell" && $(node) == default ]]
+        '\'' || exit 1
+        [[ $(node) == selected ]]
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+}
+
+@test "fnm の初期化に失敗しても次の読み込みで再試行できる" {
+    prepare_fnm
+    touch "$HOME/fnm-fail"
+    run -0 --separate-stderr zsh -d -f -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        (( ! $+parameters[__zshrc_fnm_pid] && ! $+parameters[init] )) || exit 1
+        rm "$HOME/fnm-fail"
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ $(node) == default && $path[1] == "$FNM_MULTISHELL_PATH/bin" ]]
+    '
+    [ -z "$output" ]
+    [ "$stderr" = 'fnm env の失敗' ]
 }
