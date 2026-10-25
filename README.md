@@ -85,7 +85,7 @@ exec zsh
 |---|---|
 | 通常のセットアップ | `zsh git bash coreutils curl tar gzip ca-certificates` |
 | オフライン用の梱包・展開 | 上記に加えて `python3`（3.9 以上。アーカイブの検査用） |
-| 回帰テスト | `bats`（1.5 以上） |
+| 回帰テスト | `bats`（1.5 以上）、`python3` |
 | 任意の追加ツール | `emacs`、fnm 導入時は `unzip` |
 
 clone にはリポジトリへのアクセス権と GitHub に登録した SSH 鍵が必要です。
@@ -117,8 +117,8 @@ cd "$HOME/.config/zsh"
 bash setup.sh --packing-package
 ```
 
-`package.tar.gz` に Oh My Zsh（同梱プラグインを含む）、fzf、Starship、zoxide を保存します。
-fzf-tab が標準配置に導入済みなら、それも含めます。Git のローカル設定・hooks・未追跡ファイル、
+`package.tar.gz` に Oh My Zsh（同梱プラグインを含む）、fzf、fzf-tab、Starship、zoxide を保存します。
+Git のローカル設定・hooks・未追跡ファイル、
 独自の custom 設定、履歴・キャッシュ・資格情報、任意の Emacs・fnm・Node.js は含めません。
 zsh 本体などの OS パッケージは移行先の apt で用意します。依存リポジトリの追跡ファイルにある未コミット変更は
 梱包せず、エラーにします。圧縮に失敗した場合は既存のアーカイブを保持します。

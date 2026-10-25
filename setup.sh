@@ -140,12 +140,10 @@ packing_package() (
     printf '1\n%s\n%s\n' "$(uname -s)" "$(uname -m)" > "$root/platform"
     package_repo "$HOME/.oh-my-zsh" "$root/oh-my-zsh" https://github.com/ohmyzsh/ohmyzsh.git
     package_repo "$HOME/.fzf" "$root/fzf" https://github.com/junegunn/fzf.git
-    # 外部プラグインが導入済みなら、その公式 checkout も含める。
-    if exists "$HOME/.oh-my-zsh/custom/plugins/fzf-tab"; then
-        mkdir -p "$root/oh-my-zsh/custom/plugins"
-        package_repo "$HOME/.oh-my-zsh/custom/plugins/fzf-tab" \
-            "$root/oh-my-zsh/custom/plugins/fzf-tab" https://github.com/Aloxaf/fzf-tab.git
-    fi
+    # 外部プラグインも通常のセットアップと同じ構成で含める。
+    mkdir -p "$root/oh-my-zsh/custom/plugins"
+    package_repo "$HOME/.oh-my-zsh/custom/plugins/fzf-tab" \
+        "$root/oh-my-zsh/custom/plugins/fzf-tab" https://github.com/Aloxaf/fzf-tab.git
     mkdir -p "$root/fzf/bin"
     cp -L -- "$HOME/.fzf/bin/fzf" "$root/fzf/bin/fzf"
     for tool in starship zoxide; do
@@ -167,10 +165,11 @@ validate_package() {
         fail 'パッケージ形式または OS・CPU が一致しません。'
     for file in oh-my-zsh/oh-my-zsh.sh \
         oh-my-zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh \
-        oh-my-zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh fzf/install; do
+        oh-my-zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh \
+        oh-my-zsh/custom/plugins/fzf-tab/fzf-tab.plugin.zsh fzf/install; do
         [[ -f $root/$file ]] || fail 'パッケージに必要なファイルがありません。'
     done
-    for directory in oh-my-zsh fzf; do
+    for directory in oh-my-zsh fzf oh-my-zsh/custom/plugins/fzf-tab; do
         [[ -d $root/$directory/.git ]] || fail 'パッケージに Git checkout がありません。'
     done
     for file in fzf/bin/fzf bin/starship bin/zoxide; do

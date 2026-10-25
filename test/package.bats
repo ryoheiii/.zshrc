@@ -172,6 +172,8 @@ SCRIPT
 
 @test "導入済みの fzf-tab も個人の custom 設定と分離して梱包する" {
     local plugin="$HOME/.oh-my-zsh/custom/plugins/fzf-tab"
+    # 通常導入で作られたテスト用 checkout があっても、この検査専用に作り直す。
+    rm -rf -- "$plugin"
     git init -q -b master "$plugin"
     printf '# テスト用プラグイン\n' > "$plugin/fzf-tab.plugin.zsh"
     git -C "$plugin" add -- fzf-tab.plugin.zsh
