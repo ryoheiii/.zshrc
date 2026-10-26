@@ -61,4 +61,5 @@ fnm default lts-latest
 `.node-version` による自動切り替えは設定していません。
 `zns` で設定を再読み込みしても、`fnm use` で選択中のバージョンを保持します。
 新しい zsh では fnm の既定バージョンで初期化し、その後の切り替えはシェルごとに独立します。
-PATH は fnm の Node.js → `~/.local/share/fnm` → `~/.fzf/bin` → `~/.local/bin` → 元の PATH の順です。
+ローカル設定がない場合、PATH は fnm の Node.js → `~/.local/share/fnm` → `~/.fzf/bin` → `~/.local/bin` → 元の PATH の順です。
+PC 固有の PATH は `_zshrc.env.local` へ追加します。共通 PATH 設定後、fnm 初期化前に読み込むため、選択中の Node.js の PATH がその先頭に置かれます。

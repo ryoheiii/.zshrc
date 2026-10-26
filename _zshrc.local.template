@@ -1,0 +1,13 @@
+# この PC の alias・関数
+# 必要な例のコメントを外して編集する。
+
+### alias
+# alias build-special='BUILD_PROFILE=special make'
+
+### 関数
+# function build-special-target() {
+#     BUILD_PROFILE=special make "$@"
+# }
+
+### 反映
+# 保存後に zns を実行する。定義を削除した場合は exec zsh で起動し直す。

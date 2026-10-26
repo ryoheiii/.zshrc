@@ -61,7 +61,8 @@ VS Code の短縮は `code` が利用できる場合だけ定義します。ク�
 - `zns` はコンパイルファイルを作りません。以前の `~/.zshrc.zwc` は設定本体より古ければ無視されます。
 - `zns` では Oh My Zsh・補完・Starship を再初期化しません。補完・プラグイン・ツールの変更後は `exec zsh` で起動し直します。
 - `zns` は fnm で選択中の Node.js と PATH を保持します。新しいシェルの Node.js は独立して切り替えられます。
-- 非対話で明示的に source した場合は PATH と fnm、未指定の場合の EDITOR だけ設定し、補完や画面操作用の拡張は読み込みません。
+- PC 固有の proxy・PATH は `_zshrc.env.local`、alias・関数は `_zshrc.local` へ記入します。[PC 固有のカスタマイズ](../README.md#pc-固有のカスタマイズ)を参照してください。
+- 非対話で明示的に source した場合は PATH・fnm・未指定の場合の EDITOR と `_zshrc.env.local` を適用し、対話用の `_zshrc.local` や補完・画面操作用の拡張は読み込みません。
 
 ## 以前の設定からの変更
 

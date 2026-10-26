@@ -4,8 +4,7 @@ bats_require_minimum_version 1.5.0
 load setup-tools
 
 setup() {
-    SETUP_SCRIPT="$BATS_TEST_DIRNAME/../setup.sh"
-    SOURCE_FILE="$(cd "$BATS_TEST_DIRNAME/.." && pwd -P)/_zshrc"
+    prepare_configuration_repo
     export HOME="$BATS_TEST_TMPDIR/home with spaces"
     mkdir -p "$HOME"
     export ZDOTDIR="$HOME"
@@ -40,6 +39,43 @@ setup() {
     [ "$(cat "$HOME/.zshrc")" = '元の設定' ]
     [ "$(cat "$HOME/.zshrc.zwc")" = '元のコンパイル結果' ]
     [ ! -w "$HOME/.zshrc.zwc" ]
+}
+
+@test "ローカル設定をテンプレートから作成し、再導入・更新・削除でも編集内容を保持する" {
+    run -0 bash "$SETUP_SCRIPT" install
+    for name in _zshrc.env.local _zshrc.local; do
+        cmp "$CONFIG_REPO/$name.template" "$CONFIG_REPO/$name"
+        [ "$(stat -c '%a' "$CONFIG_REPO/$name")" = 600 ]
+        printf '# この PC の設定\n' > "$CONFIG_REPO/$name"
+    done
+    run -0 bash "$SETUP_SCRIPT" install
+    run -0 bash "$SETUP_SCRIPT" update
+    run -0 bash "$SETUP_SCRIPT" uninstall
+    for name in _zshrc.env.local _zshrc.local; do
+        [ "$(cat "$CONFIG_REPO/$name")" = '# この PC の設定' ]
+    done
+}
+
+@test "既存のローカル設定へのリンクを保ち、不正な配置やテンプレート不足は退避前に拒否する" {
+    printf '# 別の場所の設定\n' > "$HOME/custom.zsh"
+    ln -s "$HOME/custom.zsh" "$CONFIG_REPO/_zshrc.env.local"
+    run -0 bash "$SETUP_SCRIPT" install
+    [ -L "$CONFIG_REPO/_zshrc.env.local" ]
+    [ "$(cat "$HOME/custom.zsh")" = '# 別の場所の設定' ]
+    run -0 bash "$SETUP_SCRIPT" uninstall
+    rm "$CONFIG_REPO/_zshrc.local"
+    mkdir "$CONFIG_REPO/_zshrc.local"
+    run -1 bash "$SETUP_SCRIPT" install
+    [ ! -e "$BACKUP" ]
+    rmdir "$CONFIG_REPO/_zshrc.local"
+    ln -s missing "$CONFIG_REPO/_zshrc.local"
+    run -1 bash "$SETUP_SCRIPT" install
+    [ -L "$CONFIG_REPO/_zshrc.local" ]
+    [ ! -e "$BACKUP" ]
+    rm "$CONFIG_REPO/_zshrc.local" "$CONFIG_REPO/_zshrc.local.template"
+    run -1 bash "$SETUP_SCRIPT" install
+    [ ! -e "$BACKUP" ]
+    [ ! -e "$HOME/.zshrc" ]
 }
 
 @test "繰り返し install しても退避内容を上書きしない" {
@@ -165,11 +201,15 @@ setup() {
 @test "update は公式配布元の変更を取り込み、設定の退避には触らない" {
     printf '元の設定\n' > "$HOME/.zshrc"
     run -0 bash "$SETUP_SCRIPT" install
+    # 導入済みの PC が git pull 後に更新する場合も、未作成のローカル設定を用意する。
+    rm "$CONFIG_REPO/_zshrc.env.local" "$CONFIG_REPO/_zshrc.local"
     local upstream="$BATS_TEST_TMPDIR/upstream/ohmyzsh/ohmyzsh.git"
     printf '# 更新\n' > "$upstream/oh-my-zsh.sh"
     git -C "$upstream" add -- oh-my-zsh.sh
     git -C "$upstream" commit -qm 'テスト用の更新'
     run -0 bash "$SETUP_SCRIPT" update
+    cmp "$CONFIG_REPO/_zshrc.env.local.template" "$CONFIG_REPO/_zshrc.env.local"
+    cmp "$CONFIG_REPO/_zshrc.local.template" "$CONFIG_REPO/_zshrc.local"
     [ "$(cat "$HOME/.oh-my-zsh/oh-my-zsh.sh")" = '# 更新' ]
     [ "$(cat "$BACKUP/.zshrc")" = '元の設定' ]
     [ "$(wc -l < "$TOOLS_DOWNLOAD_LOG")" -eq 4 ]

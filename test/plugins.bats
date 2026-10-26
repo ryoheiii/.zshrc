@@ -8,7 +8,10 @@ setup() {
     export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
     export ZSH_CUSTOM="$ZSH/custom"
     export TERM=xterm-256color
-    ln -s "$BATS_TEST_DIRNAME/../_zshrc" "$ZDOTDIR/.zshrc"
+    # 実リポジトリの PC 固有の設定はテストへ読み込まない。
+    cp "$BATS_TEST_DIRNAME/../_zshrc" "$ZDOTDIR/_zshrc"
+    cp "$BATS_TEST_DIRNAME/../starship.toml" "$ZDOTDIR/"
+    ln -s "$ZDOTDIR/_zshrc" "$ZDOTDIR/.zshrc"
     PTY_RUN="$BATS_TEST_DIRNAME/pty-run.py"
 }
 

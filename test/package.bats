@@ -4,7 +4,7 @@ bats_require_minimum_version 1.5.0
 load setup-tools
 
 setup() {
-    SETUP_SCRIPT="$BATS_TEST_DIRNAME/../setup.sh"
+    prepare_configuration_repo
     export HOME="$BATS_TEST_TMPDIR/online home"
     mkdir -p "$HOME"
     export ZDOTDIR="$HOME"
@@ -46,7 +46,11 @@ offline_home() {
     [ "$(git -C "$omz" config --get remote.origin.url)" = https://github.com/ohmyzsh/ohmyzsh.git ]
     offline_home
     printf '元の設定\n' > "$HOME/.zshrc"
+    # 別 PC の設定ファイル配置を再現し、オフライン導入でもテンプレートを作る。
+    rm "$CONFIG_REPO/_zshrc.env.local" "$CONFIG_REPO/_zshrc.local"
     run -0 bash "$SETUP_SCRIPT" --extract-package "$ARCHIVE"
+    cmp "$CONFIG_REPO/_zshrc.env.local.template" "$CONFIG_REPO/_zshrc.env.local"
+    cmp "$CONFIG_REPO/_zshrc.local.template" "$CONFIG_REPO/_zshrc.local"
     [ -x "$HOME/.fzf/bin/fzf" ]
     [ -x "$HOME/.local/bin/starship" ]
     [ -x "$HOME/.local/bin/zoxide" ]

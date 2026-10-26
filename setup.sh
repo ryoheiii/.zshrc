@@ -43,6 +43,22 @@ is_installed() {
     [[ -L $rc && $(readlink -- "$rc") == "$source_file" ]]
 }
 
+# PC 固有の設定は、未作成の場合だけ説明と設定例の入ったテンプレートから用意する。
+prepare_local_configuration() {
+    local name target template
+    for name in _zshrc.env.local _zshrc.local; do
+        target="$repo_dir/$name"
+        template="$target.template"
+        if exists "$target"; then
+            [[ -f $target ]] || fail "$target が通常のファイルを参照していません。"
+            continue
+        fi
+        [[ -f $template && -r $template ]] || fail "$template が読み込めません。"
+        # 同時にファイルが作られた場合も既存の内容を上書きしない。
+        (umask 077; set -o noclobber; cat -- "$template" > "$target") || fail "$target を作成できません。"
+    done
+}
+
 # 公式リポジトリを導入する。更新はローカル変更を保持し、fast-forward に限定する。
 sync_repo() {
     local directory=$1 url=$2
@@ -332,6 +348,7 @@ for file in "$rc" "$compiled"; do
 done
 
 if [[ $action == update ]]; then
+    prepare_local_configuration
     install_tools
     printf 'ツールを更新しました。設定ファイルへの追記は不要です。exec zsh で起動し直してください。\n'
     exit 0
@@ -343,6 +360,8 @@ if [[ $action == install || $action == --extract-package ]]; then
     if ! is_installed || [[ ! -d $backup || -L $backup ]]; then
         exists "$backup" && fail "$backup が既にあります。退避内容を確認してください。"
     fi
+    # テンプレートの作成失敗は、ツールの配置や既存設定の退避を始める前に検出する。
+    prepare_local_configuration
     # オフライン展開は依存物の入れ替えと設定リンク作成をまとめて復元対象にする。
     if [[ $action == --extract-package ]]; then
         extract_package

@@ -2,6 +2,10 @@
 *.zwc
 .zcompdump*
 
+# PC 固有の設定（テンプレートだけを Git 管理する）
+/_zshrc.env.local
+/_zshrc.local
+
 # 文書の生成物（mdh で変換した HTML）
 /README.html
 

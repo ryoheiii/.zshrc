@@ -1,3 +1,15 @@
+# 実リポジトリのローカル設定を変更せず、一時配置でセットアップを検査する。
+prepare_configuration_repo() {
+    CONFIG_REPO="$BATS_TEST_TMPDIR/config repo"
+    mkdir -p "$CONFIG_REPO"
+    cp -- "$BATS_TEST_DIRNAME/../setup.sh" "$BATS_TEST_DIRNAME/../_zshrc" \
+        "$BATS_TEST_DIRNAME/../starship.toml" \
+        "$BATS_TEST_DIRNAME/../_zshrc.env.local.template" \
+        "$BATS_TEST_DIRNAME/../_zshrc.local.template" "$CONFIG_REPO/"
+    SETUP_SCRIPT="$CONFIG_REPO/setup.sh"
+    SOURCE_FILE="$CONFIG_REPO/_zshrc"
+}
+
 # ネットワークを使わず公式導入先への取得・更新を再現する。
 prepare_tools() {
     export GIT_CONFIG_GLOBAL="$BATS_TEST_TMPDIR/gitconfig"

@@ -5,7 +5,12 @@
 bats_require_minimum_version 1.5.0
 
 setup() {
-    ZSHRC="$BATS_TEST_DIRNAME/../_zshrc"
+    # PC 固有の設定に依存しないよう、共通設定も一時ディレクトリへコピーする。
+    CONFIG_REPO="$BATS_TEST_TMPDIR/config repo"
+    mkdir "$CONFIG_REPO"
+    ZSHRC="$CONFIG_REPO/_zshrc"
+    cp "$BATS_TEST_DIRNAME/../_zshrc" "$ZSHRC"
+    cp "$BATS_TEST_DIRNAME/../starship.toml" "$CONFIG_REPO/"
     # ~/.zshrc を差し替えずに作業中の _zshrc を読ませる。compinit の .zcompdump もここにでき、テスト後に消える
     export ZDOTDIR="$BATS_TEST_TMPDIR"
     export XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache"
@@ -53,6 +58,119 @@ setup() {
         if alias zns >/dev/null; then print 'ガードより後の alias zns が定義された'; exit 1; fi
     "
     [ -z "$stderr" ]
+}
+
+@test "ローカル設定は Git 除外され、テンプレートは除外されない" {
+    local repo="$BATS_TEST_DIRNAME/.."
+    run -0 git -C "$repo" check-ignore -- _zshrc.env.local _zshrc.local
+    [ "${#lines[@]}" -eq 2 ]
+    run -1 git -C "$repo" check-ignore --no-index -- _zshrc.env.local.template _zshrc.local.template
+    [ -z "$output" ]
+}
+
+@test "symlink の先にある環境設定だけを非対話で読み込み、proxy と空白付き PATH を引き継ぐ" {
+    mkdir -p "$ZDOTDIR/build tools/bin" "$ZDOTDIR/env-home"
+    cat > "$CONFIG_REPO/_zshrc.env.local" <<'ZSH'
+export http_proxy='http://proxy.example.test:8080'
+export https_proxy="$http_proxy"
+export no_proxy='localhost,127.0.0.1'
+export PATH="$ZDOTDIR/build tools/bin:$PATH"
+ZSH
+    # 配置先ではなく ZDOTDIR を読んだり、対話用の設定まで読んだりすると失敗する。
+    printf 'print -u2 読み込み禁止; return 1\n' > "$ZDOTDIR/_zshrc.env.local"
+    printf 'print -u2 読み込み禁止; return 1\n' > "$CONFIG_REPO/_zshrc.local"
+    run -0 --separate-stderr env HOME="$ZDOTDIR/env-home" PATH=/usr/bin:/bin zsh -d -f -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        source "$ZDOTDIR/.zshrc" || exit 1
+        unique_path=("${(@u)path}")
+        (( ${#path} == ${#unique_path} )) || exit 1
+        zsh -d -f -c '\''
+            [[ $http_proxy == http://proxy.example.test:8080 ]] || exit 1
+            [[ $https_proxy == "$http_proxy" && $no_proxy == localhost,127.0.0.1 ]] || exit 1
+            [[ $path[1] == "$ZDOTDIR/build tools/bin" ]]
+        '\''
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+}
+
+@test "対話用のローカル設定で共通の alias を上書きでき、zns で両ファイルを読み直す" {
+    cat > "$CONFIG_REPO/_zshrc.env.local" <<'ZSH'
+export EDITOR=local-editor
+typeset local_scope_probe=global
+local_env_reads=$(( ${local_env_reads:-0} + 1 ))
+ZSH
+    cat > "$CONFIG_REPO/_zshrc.local" <<'ZSH'
+# 補完などの共通設定が終わった後に読まれることを確かめる。
+(( $+functions[compdef] )) || return 1
+[[ $EDITOR == local-editor ]] || return 1
+local_rc_reads=$(( ${local_rc_reads:-0} + 1 ))
+alias ll='ls -l'
+alias build-special='BUILD_PROFILE=special make'
+function build-special-target() { print -r -- "$@"; }
+ZSH
+    run -0 --separate-stderr zsh -d -i -c '
+        [[ $local_env_reads == 1 && $local_rc_reads == 1 ]] || exit 1
+        [[ $local_scope_probe == global ]] || exit 1
+        [[ ${aliases[ll]} == "ls -l" ]] || exit 1
+        [[ ${aliases[build-special]} == "BUILD_PROFILE=special make" ]] || exit 1
+        [[ $(build-special-target "a b") == "a b" ]] || exit 1
+        zns || exit 1
+        [[ $local_env_reads == 2 && $local_rc_reads == 2 ]] || exit 1
+        [[ ${aliases[ll]} == "ls -l" ]]
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+}
+
+@test "テンプレートは構文が正しく、初期状態では設定を変更しない" {
+    for name in _zshrc.env.local _zshrc.local; do
+        cp "$BATS_TEST_DIRNAME/../$name.template" "$CONFIG_REPO/$name"
+        zsh -n "$CONFIG_REPO/$name"
+    done
+    run -0 --separate-stderr zsh -d -i -c '
+        [[ ${aliases[ll]} == "ls -lh" ]] || exit 1
+        (( ! $+aliases[build-special] && ! $+functions[build-special-target] )) || exit 1
+        source "$ZDOTDIR/.zshrc"
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+}
+
+@test "ローカル設定が失敗した場合は警告し、共通設定の source は正常終了する" {
+    printf 'false\n' > "$CONFIG_REPO/_zshrc.env.local"
+    printf 'false\n' > "$CONFIG_REPO/_zshrc.local"
+    run -0 --separate-stderr zsh -d -f -c 'source "$ZDOTDIR/.zshrc"'
+    [ -z "$output" ]
+    [ "$stderr" = '警告: _zshrc.env.local の読み込みが失敗しました。' ]
+    run -0 --separate-stderr zsh -d -f -i -c 'source "$ZDOTDIR/.zshrc"'
+    [ -z "$output" ]
+    [ "$stderr" = $'警告: _zshrc.env.local の読み込みが失敗しました。\n警告: _zshrc.local の読み込みが失敗しました。' ]
+}
+
+@test "ローカル設定の構文エラーを報告し、後続の環境変数と対話用設定を読み込む" {
+    printf 'if true; then\n' > "$CONFIG_REPO/_zshrc.env.local"
+    printf 'if true; then\n' > "$CONFIG_REPO/_zshrc.local"
+    mkdir -p "$ZDOTDIR/parse-home/.local/bin"
+    printf '#!/bin/sh\nexit 0\n' > "$ZDOTDIR/parse-home/.local/bin/emacsclient"
+    chmod +x "$ZDOTDIR/parse-home/.local/bin/emacsclient"
+    run -0 --separate-stderr env -u EDITOR HOME="$ZDOTDIR/parse-home" PATH=/usr/bin:/bin zsh -d -f -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ $EDITOR == "emacsclient -nw -a '\'''\''" ]]
+    '
+    [ -z "$output" ]
+    [[ "$stderr" == *'parse error'* ]]
+    [[ "$stderr" == *'警告: _zshrc.env.local の読み込みが失敗しました。'* ]]
+    [[ "$stderr" != *'警告: _zshrc.local の読み込みが失敗しました。'* ]]
+    run -0 --separate-stderr zsh -d -f -i -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        alias zns >/dev/null || exit 1
+        (( $+functions[compdef] ))
+    '
+    [ -z "$output" ]
+    [[ "$stderr" == *'parse error'* ]]
+    [[ "$stderr" == *'警告: _zshrc.env.local の読み込みが失敗しました。'* ]]
+    [[ "$stderr" == *'警告: _zshrc.local の読み込みが失敗しました。'* ]]
 }
 
 @test "source し直しても動的に登録された補完を保持する" {
@@ -181,7 +299,8 @@ setup() {
 }
 
 @test "ユーザー名を含む絶対パスが無い" {
-    run -1 grep -nE '/(home|Users)/' "$ZSHRC"
+    run -1 grep -nE '/(home|Users)/' "$ZSHRC" \
+        "$BATS_TEST_DIRNAME/../_zshrc.env.local.template" "$BATS_TEST_DIRNAME/../_zshrc.local.template"
 }
 
 @test "EDITOR が vi でも emacs 形式のキーと先頭一致の履歴検索を使える" {
@@ -309,9 +428,12 @@ SCRIPT
 
 @test "fnm は再読み込みで選択版と PATH を保ち、子シェルでは独立して初期化する" {
     prepare_fnm
+    mkdir -p "$HOME/build-tools/bin"
+    printf 'export PATH="$HOME/build-tools/bin:$PATH"\n' > "$CONFIG_REPO/_zshrc.env.local"
     run -0 --separate-stderr zsh -d -f -c '
         source "$ZDOTDIR/.zshrc" || exit 1
         [[ $(node) == default ]] || exit 1
+        [[ $path[2] == "$HOME/build-tools/bin" ]] || exit 1
         export parent_multishell=$FNM_MULTISHELL_PATH
         before=$PATH
         # fnm use に相当する選択変更。再初期化すると新しい default に戻ってしまう。

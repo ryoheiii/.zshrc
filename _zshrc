@@ -1,5 +1,5 @@
 #!/bin/zsh
-# 設定はこの 1 ファイルで管理する。操作と導入方法は README.md を参照。
+# 共通設定を管理し、PC 固有の設定は同じディレクトリのローカルファイルから読み込む。
 # 環境変数と PATH を設定した後、対話シェルでだけ基本設定以降を読み込む。
 
 ################
@@ -32,6 +32,13 @@ fi
 # 公式インストーラーで導入した fnm を使えるようにする。
 if [ -d "$HOME/.local/share/fnm" ]; then
     export PATH="$HOME/.local/share/fnm:$PATH"
+fi
+
+# PC 固有の環境変数と PATH を、symlink 解決後の配置先からツールの初期化前に読み込む。
+if [ -f "${${(%):-%x}:A:h}/_zshrc.env.local" ]; then
+    if ! source "${${(%):-%x}:A:h}/_zshrc.env.local"; then
+        print -u2 '警告: _zshrc.env.local の読み込みが失敗しました。'
+    fi
 fi
 
 ### ツールの環境設定
@@ -299,5 +306,12 @@ fi
 if [[ -n $WSL_DISTRO_NAME || ( -r /proc/sys/kernel/osrelease && "$(</proc/sys/kernel/osrelease)" == *[Mm]icrosoft* ) ]]; then
     if [[ -z $XAUTHORITY ]] && [ -f "$HOME/.Xauthority" ]; then
         export XAUTHORITY="$HOME/.Xauthority"
+    fi
+fi
+
+# PC 固有の alias・関数などを最後に読み込み、共通設定を上書きできるようにする。
+if [ -f "${${(%):-%x}:A:h}/_zshrc.local" ]; then
+    if ! source "${${(%):-%x}:A:h}/_zshrc.local"; then
+        print -u2 '警告: _zshrc.local の読み込みが失敗しました。'
     fi
 fi
