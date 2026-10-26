@@ -271,13 +271,23 @@ unsetopt complete_aliases menu_complete
 zmodload zsh/complist
 zstyle ':completion:*' group-name ''
 
+# RLogin で候補が読めるよう、太字や権限由来の背景色を使わず、選択中だけ背景を付ける。
+zstyle ':completion:*' list-colors 'di=36' 'ln=35' 'ex=32' 'ow=36' 'tw=36' 'st=36' 'ma=30;46'
+
 # fzf-tab があれば検索画面で選び、なければ矢印キーで標準メニューを操作する。
 if (( $+functions[fzf-tab-complete] )); then
     zstyle ':completion:*' menu no
     zstyle ':completion:*:descriptions' format '[%d]'
+    # RLogin で元の出力と候補が重ならないよう、補完中は全画面へ切り替える。
+    # 黒背景で見やすい基本色と ASCII の表示を使い、選択行は黒文字とシアン背景にする。
+    zstyle ':fzf-tab:*' fzf-flags --no-height --no-bold --no-unicode \
+        '--color=16,fg:7,bg:-1,hl:3,fg+:0:strip,bg+:6,hl+:0,info:6,prompt:6,pointer:3,marker:3,header:7' \
+        '--pointer=>' '--marker=+'
+    # グループの目印も文字幅が一定の ASCII に揃える。
+    zstyle ':fzf-tab:*' prefix '>'
 else
     zstyle ':completion:*' menu select
-    zstyle ':completion:*:descriptions' format '%B%d%b'
+    zstyle ':completion:*:descriptions' format '[%d]'
 fi
 
 

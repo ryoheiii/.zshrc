@@ -2,9 +2,10 @@
 format = "$username$hostname$directory$git_branch$git_state$git_status$cmd_duration$status$character"
 add_newline = false
 
-# SSH 接続時や root での操作は Starship 標準のユーザー表示を使う。
+# SSH 接続時のホスト名は、RLogin の文字装飾に左右されにくい通常のシアンで表示する。
 [hostname]
 ssh_symbol = ""
+style = "cyan"
 
 # ホームだけを ~ に置き換え、Git リポジトリ内でも途中のパスを省略しない。
 [directory]
