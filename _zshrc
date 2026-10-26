@@ -278,9 +278,9 @@ zstyle ':completion:*' list-colors 'di=36' 'ln=35' 'ex=32' 'ow=36' 'tw=36' 'st=3
 if (( $+functions[fzf-tab-complete] )); then
     zstyle ':completion:*' menu no
     zstyle ':completion:*:descriptions' format '[%d]'
-    # RLogin で元の出力と候補が重ならないよう、補完中は全画面へ切り替える。
+    # 補完候補は入力行の下に画面の約 40% の高さで表示し、小さい端末でも全画面にしない。
     # 黒背景で見やすい基本色と ASCII の表示を使い、選択行は黒文字とシアン背景にする。
-    zstyle ':fzf-tab:*' fzf-flags --no-height --no-bold --no-unicode \
+    zstyle ':fzf-tab:*' fzf-flags --height=40% --min-height=4 --no-bold --no-unicode \
         '--color=16,fg:7,bg:-1,hl:3,fg+:0:strip,bg+:6,hl+:0,info:6,prompt:6,pointer:3,marker:3,header:7' \
         '--pointer=>' '--marker=+'
     # グループの目印も文字幅が一定の ASCII に揃える。

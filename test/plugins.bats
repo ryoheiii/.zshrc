@@ -44,7 +44,7 @@ setup() {
     [ -z "$output" ]
 }
 
-@test "補完は折り返した入力から専用画面へ切り替わり、連続 Tab・キャンセル・採用後に元の画面へ戻る" {
+@test "補完は全画面にせず、折り返した入力での表示・連続 Tab・キャンセル・採用を扱える" {
     [ -f "$ZSH_CUSTOM/plugins/fzf-tab/fzf-tab.plugin.zsh" ] || skip 'fzf-tab が未導入'
     command -v fzf >/dev/null || skip 'fzf が未導入'
     run -0 --separate-stderr python3 "$BATS_TEST_DIRNAME/completion-ui.py"
