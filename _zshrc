@@ -322,8 +322,13 @@ if [[ -n $WSL_DISTRO_NAME || ( -r /proc/sys/kernel/osrelease && "$(</proc/sys/ke
     if [[ -n $LS_COLORS ]]; then
         () {
             local -a colors=(${(s.:.)LS_COLORS})
-            local dir_color=${${(M)colors:#di=*}[1]#di=}
-            colors=(${colors:#ow=*} "ow=${dir_color:-01;34}")
+            local -a dir_entries=(${(M)colors:#di=*})
+            # di の指定があればその値（空の無装飾指定を含む）を使い、無ければ dircolors 既定のディレクトリ色にする。
+            local ow_color='01;34'
+            if (( $#dir_entries )); then
+                ow_color=${dir_entries[1]#di=}
+            fi
+            colors=(${colors:#ow=*} "ow=$ow_color")
             export LS_COLORS=${(j.:.)colors}
         }
     fi

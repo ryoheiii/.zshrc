@@ -270,7 +270,7 @@ ZSH
         [[ $LS_COLORS == "$expected" ]] || { print -r -- "LS_COLORS: $LS_COLORS"; exit 1; }
         source "$ZDOTDIR/.zshrc" || exit 1
         [[ $LS_COLORS == "$expected" ]] || { print -r -- "再読み込み後: $LS_COLORS"; exit 1; }
-        for v in colors dir_color; do
+        for v in colors dir_entries ow_color; do
             if (( $+parameters[$v] )); then print "作業用の変数 $v が残っている"; exit 1; fi
         done
         # 補完の色は zstyle の定義時ではなく参照時の LS_COLORS を使う
@@ -282,10 +282,13 @@ ZSH
     '
     [ -z "$output" ]
     [ -z "$stderr" ]
-    # di が無ければ dircolors 既定のディレクトリ色にする
+    # di が無ければ dircolors 既定のディレクトリ色にし、di が空（無装飾）なら ow も無装飾にする
     run -0 --separate-stderr env WSL_DISTRO_NAME=probe LS_COLORS='ow=34;42:ex=01;32' zsh -d -f -i -c '
         source "$ZDOTDIR/.zshrc" || exit 1
         [[ $LS_COLORS == "ex=01;32:ow=01;34" ]] || { print -r -- "LS_COLORS: $LS_COLORS"; exit 1; }
+        LS_COLORS="di=:ow=34;42"
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ $LS_COLORS == "di=:ow=" ]] || { print -r -- "di が空のとき: $LS_COLORS"; exit 1; }
     '
     [ -z "$output" ]
     [ -z "$stderr" ]
