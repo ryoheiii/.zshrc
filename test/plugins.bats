@@ -18,7 +18,8 @@ setup() {
 @test "TTYでTab検索と既存の履歴・ファイル検索が共存し、再読み込みしても重複しない" {
     [ -f "$ZSH_CUSTOM/plugins/fzf-tab/fzf-tab.plugin.zsh" ] || skip 'fzf-tab が未導入'
     command -v fzf >/dev/null || skip 'fzf が未導入'
-    run -0 python3 "$PTY_RUN" zsh -i -c '
+    # 呼び出し元の FZF_DEFAULT_OPTS に左右されず、共通設定の既定値を検査する
+    run -0 env -u FZF_DEFAULT_OPTS python3 "$PTY_RUN" zsh -i -c '
         [[ ${plugins[(i)fzf]} -lt ${plugins[(i)fzf-tab]} ]] || exit 1
         [[ ${plugins[(i)fzf-tab]} -lt ${plugins[(i)zsh-autosuggestions]} ]] || exit 1
         [[ ${plugins[-1]} == zsh-syntax-highlighting ]] || exit 1
@@ -34,6 +35,18 @@ setup() {
         [[ ${_comps[pluginprobe]} == _files && ${_comps[git]} == _git ]] || exit 1
         zstyle -s ":completion:*" menu reply
         [[ $reply == no ]] || exit 1
+        # fzf の画面は ASCII 表示で統一し、fzf-tab は README の一般的な設定（グループ切替・cd のプレビュー）を使う
+        [[ $FZF_DEFAULT_OPTS == --no-unicode ]] || exit 1
+        zstyle -t ":fzf-tab:complete:cd:argument-rest" use-fzf-default-opts || exit 1
+        zstyle -a ":fzf-tab:complete:cd:argument-rest" switch-group reply
+        [[ $reply == "< >" ]] || exit 1
+        zstyle -s ":fzf-tab:complete:cd:argument-rest" fzf-preview reply
+        [[ $reply == "[[ -d \$realpath ]] && ls -1 --color=always -- \$realpath" ]] || exit 1
+        zstyle -a ":fzf-tab:complete:cd:argument-rest" fzf-flags reply
+        [[ $reply == "--preview-window=right,50%,<30(hidden)" ]] || exit 1
+        # cd 以外の補完には独自の fzf オプションもプレビューも付けない
+        if zstyle -a ":fzf-tab:complete:ls:argument-rest" fzf-flags reply; then exit 1; fi
+        if zstyle -s ":fzf-tab:complete:ls:argument-rest" fzf-preview reply; then exit 1; fi
         [[ $(bindkey "^I") == *fzf-tab-complete ]] || exit 1
         [[ $(bindkey "^R") == *fzf-history-widget ]] || exit 1
         [[ $(bindkey "^T") == *fzf-file-widget ]] || exit 1

@@ -260,6 +260,58 @@ ZSH
     done
 }
 
+@test "WSL では ow の配色を di に揃え、補完の色は現在の LS_COLORS に従う" {
+    # 重複キーは ls・complist・fzf-tab で優先順位が異なるため、既存の ow= をすべて除いて末尾に付け、再読み込みでも増やさない。
+    # tw など他のキーは保つ
+    run -0 --separate-stderr env WSL_DISTRO_NAME=probe LS_COLORS='rs=0:di=01;35:ow=34;42:tw=30;42:*.tar=01;31:ow=1;2' \
+        zsh -d -f -i -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        expected="rs=0:di=01;35:tw=30;42:*.tar=01;31:ow=01;35"
+        [[ $LS_COLORS == "$expected" ]] || { print -r -- "LS_COLORS: $LS_COLORS"; exit 1; }
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ $LS_COLORS == "$expected" ]] || { print -r -- "再読み込み後: $LS_COLORS"; exit 1; }
+        for v in colors dir_color; do
+            if (( $+parameters[$v] )); then print "作業用の変数 $v が残っている"; exit 1; fi
+        done
+        # 補完の色は zstyle の定義時ではなく参照時の LS_COLORS を使う
+        zstyle -a ":completion:*" list-colors reply
+        [[ "${(j.:.)reply}" == "$expected" ]] || { print -r -- "list-colors: $reply"; exit 1; }
+        LS_COLORS="di=01;36"
+        zstyle -a ":completion:*" list-colors reply
+        [[ $reply == "di=01;36" ]]
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+    # di が無ければ dircolors 既定のディレクトリ色にする
+    run -0 --separate-stderr env WSL_DISTRO_NAME=probe LS_COLORS='ow=34;42:ex=01;32' zsh -d -f -i -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ $LS_COLORS == "ex=01;32:ow=01;34" ]] || { print -r -- "LS_COLORS: $LS_COLORS"; exit 1; }
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+}
+
+@test "LS_COLORS が無い環境では補完に ls 既定色を使い、FZF_DEFAULT_OPTS は未指定のときだけ設定する" {
+    mkdir "$BATS_TEST_TMPDIR/empty-home"
+    # Oh My Zsh も dircolors も無い環境。空文字 1 つの list-colors は zsh 組み込みの ls 既定色を意味する
+    run -0 --separate-stderr env -u LS_COLORS HOME="$BATS_TEST_TMPDIR/empty-home" ZSH="$BATS_TEST_TMPDIR/missing-omz" \
+        PATH=/usr/bin:/bin zsh -d -f -i -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ -z $LS_COLORS ]] || { print -r -- "LS_COLORS: $LS_COLORS"; exit 1; }
+        zstyle -a ":completion:*" list-colors reply
+        (( ${#reply} == 1 )) && [[ -z $reply[1] ]]
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+    # 呼び出し元やローカル設定の FZF_DEFAULT_OPTS を上書きしない
+    run -0 --separate-stderr env FZF_DEFAULT_OPTS='--color=light' zsh -d -f -c '
+        source "$ZDOTDIR/.zshrc" || exit 1
+        [[ $FZF_DEFAULT_OPTS == "--color=light" ]]
+    '
+    [ -z "$output" ]
+    [ -z "$stderr" ]
+}
+
 
 @test "typeset -gU path PATH は最初の PATH の変更と非対話ガードより前にある" {
     typeset_line=$(grep -n '^typeset -gU path PATH$' "$ZSHRC" | cut -d: -f1)

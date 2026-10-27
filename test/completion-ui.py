@@ -5,12 +5,16 @@ import fcntl
 import os
 from pathlib import Path
 import pty
+import re
 import select
 import signal
 import struct
 import tempfile
 import termios
 import time
+
+# fzf は一致した文字だけ色を変えるため、候補名の途中に制御シーケンスが入る。期待する語は色を除いて探す。
+ANSI_SEQUENCE = re.compile(rb'\x1b\[[0-9;?]*[ -/]*[@-~]')
 
 
 with tempfile.TemporaryDirectory(dir=os.environ['ZDOTDIR']) as temp:
@@ -40,6 +44,10 @@ print -rl -- OLD-OUTPUT-{1..20}
         data = bytearray()
         deadline = time.monotonic() + 8
         last = time.monotonic()
+
+        def received():
+            return token is None or token in ANSI_SEQUENCE.sub(b'', bytes(data))
+
         while time.monotonic() < deadline:
             if select.select([master], [], [], 0.05)[0]:
                 try:
@@ -56,9 +64,9 @@ print -rl -- OLD-OUTPUT-{1..20}
                 # 入力行の下に候補を配置できるよう、端末からのカーソル位置応答を再現する。
                 if b'\x1b[6n' in chunk:
                     os.write(master, b'\x1b[12;1R')
-            elif time.monotonic() - last > 0.2 and (token is None or token in data):
+            elif time.monotonic() - last > 0.2 and received():
                 return bytes(data)
-        assert token is None or token in data, '期待した端末出力がありません'
+        assert received(), '期待した端末出力がありません'
         return bytes(data)
 
     def send(value):

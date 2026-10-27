@@ -63,6 +63,12 @@ if [[ -z $EDITOR ]] && __zshrc_has emacsclient; then
     export EDITOR="emacsclient -nw -a ''"
 fi
 
+# fzf の画面（Ctrl+R、Tab 補完、zi など）の表示が未指定なら、端末設定で幅が変わる罫線や記号を使わず ASCII にする。
+# 表示用のオプションだけを置く（--height や --bind は Tab 補完の動作を変えるため）。
+if [[ -z $FZF_DEFAULT_OPTS ]] && __zshrc_has fzf; then
+    export FZF_DEFAULT_OPTS='--no-unicode'
+fi
+
 # 非対話シェルから明示的に source した場合は、ここで正常終了する。
 [[ -o interactive ]] || return 0
 
@@ -278,23 +284,26 @@ unsetopt complete_aliases menu_complete
 zmodload zsh/complist
 zstyle ':completion:*' group-name ''
 
-# RLogin で候補が読めるよう、太字や権限由来の背景色を使わず、選択中だけ背景を付ける。
-zstyle ':completion:*' list-colors 'di=36' 'ln=35' 'ex=32' 'ow=36' 'tw=36' 'st=36' 'ma=30;46'
+# 候補の色は ls と同じ LS_COLORS に揃え、後の節やローカル設定で変えた値も補完のたびに反映する。
+# LS_COLORS が無い環境では空文字 1 つを返し、zsh 組み込みの ls 既定色を使う。
+zstyle -e ':completion:*' list-colors 'reply=("${(@s.:.)LS_COLORS}")'
+zstyle ':completion:*:descriptions' format '[%d]'
 
 # fzf-tab があれば検索画面で選び、なければ矢印キーで標準メニューを操作する。
 if (( $+functions[fzf-tab-complete] )); then
     zstyle ':completion:*' menu no
-    zstyle ':completion:*:descriptions' format '[%d]'
-    # 補完候補は入力行の下に画面の約 40% の高さで表示し、小さい端末でも全画面にしない。
-    # 黒背景で見やすい基本色と ASCII の表示を使い、選択行は黒文字とシアン背景にする。
-    zstyle ':fzf-tab:*' fzf-flags --height=40% --min-height=4 --no-bold --no-unicode \
-        '--color=16,fg:7,bg:-1,hl:3,fg+:0:strip,bg+:6,hl+:0,info:6,prompt:6,pointer:3,marker:3,header:7' \
-        '--pointer=>' '--marker=+'
-    # グループの目印も文字幅が一定の ASCII に揃える。
-    zstyle ':fzf-tab:*' prefix '>'
+    # FZF_DEFAULT_OPTS の表示設定を Tab 補完にも使う。
+    zstyle ':fzf-tab:*' use-fzf-default-opts yes
+    # グループの目印には、端末設定で幅が変わる「·」を使わない。
+    zstyle ':fzf-tab:*' prefix ''
+    # < と > でグループを切り替える。既定の F1 / F2 は VS Code などが横取りする。
+    zstyle ':fzf-tab:*' switch-group '<' '>'
+    # cd の候補では、選択中のディレクトリの内容を右半分に表示する。移動履歴などパスでない候補には出さず、
+    # 端末の幅が 60 桁未満なら候補の表示幅を優先して隠す。
+    zstyle ':fzf-tab:complete:cd:*' fzf-preview '[[ -d $realpath ]] && ls -1 --color=always -- $realpath'
+    zstyle ':fzf-tab:complete:cd:*' fzf-flags '--preview-window=right,50%,<30(hidden)'
 else
     zstyle ':completion:*' menu select
-    zstyle ':completion:*:descriptions' format '[%d]'
 fi
 
 
@@ -306,6 +315,17 @@ fi
 if [[ -n $WSL_DISTRO_NAME || ( -r /proc/sys/kernel/osrelease && "$(</proc/sys/kernel/osrelease)" == *[Mm]icrosoft* ) ]]; then
     if [[ -z $XAUTHORITY ]] && [ -f "$HOME/.Xauthority" ]; then
         export XAUTHORITY="$HOME/.Xauthority"
+    fi
+    # /mnt 配下は他ユーザー書き込み可（ow）の扱いになり、ls と補完候補のディレクトリ名に緑の背景が付くため、
+    # 通常のディレクトリ（di）と同じ配色にする。同じキーが重複すると ls と補完で採用順が異なるので、
+    # 既存の ow= を除いてから付け、再読み込みしても増やさない。
+    if [[ -n $LS_COLORS ]]; then
+        () {
+            local -a colors=(${(s.:.)LS_COLORS})
+            local dir_color=${${(M)colors:#di=*}[1]#di=}
+            colors=(${colors:#ow=*} "ow=${dir_color:-01;34}")
+            export LS_COLORS=${(j.:.)colors}
+        }
     fi
 fi
 
